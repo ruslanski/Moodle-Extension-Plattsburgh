@@ -31,9 +31,13 @@ function checkUserLogin(){
     console.log(mainPage);
     if(mainPage.responseURL.search("moodle.plattsburgh.edu/my") > -1){
       console.log("User is logged in!");
+      getPageContainingURL();
     }
     else if(mainPage.responseURL.search("cas.plattsburgh") > -1){
       console.log("Send user notification to log in");
+      // if the user is not logged in send a notification.
+      // TODO: Open a new tab to ask the user to log in to cas.
+      makeChromeNotification(type="basic", iconURL="../../icons/icon128.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.");
     }
     else{
       console.log("Some error occured!");
@@ -44,48 +48,42 @@ function checkUserLogin(){
   });
 }
 
-checkUserLogin();
-
 /**
- * @function checkValidLogin check if the user has a valid login to moodle available.
+ * @function makeChromeNotification [Generate chrome notifications]
+ * @param  {string} type    [Type of notification]
+ * @param  {string} iconURL [url to the icon for notification]
+ * @param  {string} title   [title to display on the notification]
+ * @param  {string} message [message to be sent to the notification]
  */
-function checkValidLogin(){
-  var xhr = new XMLHttpRequest();
-  var url = "https://moodle.plattsburgh.edu/login/index.php";
-  xhr.onreadystatechange = function(){
-  	if(this.readyState == 4 && this.status == 200){
-      console.log(this);
-      if(xhr.responseURL.search("moodle.plattsburgh.edu/my") > -1){
-        console.log("User is already logged in!");
-        let xhr = new XMLHttpRequest();
-        let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
-        xhr.onreadystatechange = function(){
-          if(this.readyState == 4 && this.status == 200){
-            // console.log(xhr.response);
-            let jqueryHTML = $.parseHTML(xhr.response);
-            console.log($(jqueryHTML).find("#region-main > div > div > div > div.bottom > a"));
-          }
-        };
-        xhr.open("GET", url, true);
-        xhr.send();
-      }
-      else if(xhr.responseURL.search("cas.plattsburgh") > -1){
-        console.log("Send user notification to log in");
-        chrome.notifications.create("1", {
-          type: 'basic',
-          iconUrl: '../../icons/icon128.png',
-          title: "Moodle Plattsburgh",
-          message: "Log in again! Not able to get latest calender from Moodle.",
-          requireInteraction: true
-        }, function(){});
-      }
-      else{
-        console.log("Some error occured");
-      }
-  	}
-  };
-  xhr.open('get', url, true);
-  xhr.send();
+function makeChromeNotification(type, iconURL, title, message){
+  chrome.notifications.create("1", {
+    type: type,
+    iconUrl: iconURL,
+    title: title,
+    message: message,
+    requireInteraction: true
+  }, function(){});
 }
 
-// checkValidLogin();
+/**
+ * @function getCalenderURL [Get url of the calender]
+ * @param  {string} html [HTML of the page in string format which contains calender]
+ * @return {[type]}      [description]
+ */
+function getCalenderURL(html){
+  let jqueryHTML = $.parseHTML(html);
+  console.log($(jqueryHTML).find("#region-main > div > div > div > div.bottom > a"));
+}
+
+function getPageContainingURL(){
+  let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
+  makeXHRreq(url=url, method="GET", responseType="text")
+  .then(function(page){
+    getCalenderURL(page.response);
+  })
+  .catch(function(error){
+    console.log(error);
+  });
+}
+
+checkUserLogin();
