@@ -1,5 +1,9 @@
 /* jshint esversion:6 */
 
+
+// Global Variables
+EVENTS = [];
+
 /**
  * @author Jayant Arora
  */
@@ -72,7 +76,30 @@ function makeChromeNotification(type, iconURL, title, message){
  */
 function getCalenderURL(html){
   let jqueryHTML = $.parseHTML(html);
-  console.log($(jqueryHTML).find("#region-main > div > div > div > div.bottom > a"));
+  let urlForCalender = $(jqueryHTML).find("#region-main > div > div > div > div.bottom > a")[0].href;
+  makeXHRreq(url=urlForCalender, method="GET", responseType="text")
+  .then(function(calender){
+    console.log(calender);
+    let jcalData = ICAL.parse(calender.responseText);
+    let vcalendar = new ICAL.Component(jcalData);
+    let vevents = vcalendar.getAllSubcomponents('vevent');
+    for(let i=0; i<vevents.length; i++){
+      let eventToAdd = {};
+      eventToAdd.uid = vevents[i].getFirstPropertyValue("uid");
+      eventToAdd.class = vevents[i].getFirstPropertyValue("categories");
+      eventToAdd.description = vevents[i].getFirstPropertyValue("description");
+      eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
+      eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
+      eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
+      eventToAdd.done = false;
+      EVENTS.push(eventToAdd);
+    }
+    console.log(EVENTS);
+  })
+  .catch(function(error){
+    console.log(error);
+  });
+  console.log(urlForCalender);
 }
 
 function getPageContainingURL(){
