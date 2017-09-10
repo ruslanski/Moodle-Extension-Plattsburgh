@@ -1,6 +1,6 @@
 {
   "name": "Moodle",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "manifest_version": 2,
   "description": "Moodle",
   "homepage_url": "http://www.jayantarora.com",
@@ -12,7 +12,9 @@
   "default_locale": "en",
   "background": {
     "scripts": [
-      "src/bg/background.js"
+      "src/bg/background.js",
+      "js/jquery/jquery.min.js",
+      "js/ical/ical.js"
     ],
     "persistent": true
   },
