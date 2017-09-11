@@ -28,7 +28,8 @@ color:#0eb0b7;
 }
 #todo-list{
 width:500px;
-margin:0 auto 50px auto;
+/*margin:0 auto 50px auto;*/
+margin:0 auto auto auto;
 padding:50px;
 background:white;
 position:relative;
