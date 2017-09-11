@@ -2,7 +2,12 @@
 
 
 // Global Variables
-EVENTS = {};
+// check chrome local storage is events already exit if not set it to null.
+chrome.storage.local.get(["EVENTS"], function(events){
+  if(events.EVENTS){
+    EVENTS = events.EVENTS || {};
+  }
+});
 
 /**
  * @author Jayant Arora
@@ -20,7 +25,7 @@ function makeXHRreq(url, method, responseType){
     let xhr = new XMLHttpRequest();
     xhr.responseType = responseType;
     xhr.onload = function(){resolve(xhr);};
-    xhr.onerror = function(){reject(xhr.statusText);};
+    xhr.onerror = function(error){reject(xhr.statusText);};
     xhr.open(method, url, true);
     xhr.send();
   });
@@ -48,7 +53,7 @@ function checkUserLogin(){
     }
   })
   .catch(function(error){
-    console.log(error);
+    console.log("Network Request failed: ", error);
   });
 }
 
@@ -122,6 +127,9 @@ function parseCalender(calender){
     // Add event to main EVENTS which holds all events.
     EVENTS[eventToAdd.uid] = eventToAdd;
   }
+  chrome.storage.local.set({EVENTS: EVENTS}, function(){
+    console.log("Events saved to storage");
+  });
 }
 
 checkUserLogin();
