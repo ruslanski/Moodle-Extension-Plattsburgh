@@ -2,7 +2,7 @@
 
 
 // Global Variables
-EVENTS = [];
+EVENTS = {};
 
 /**
  * @author Jayant Arora
@@ -79,22 +79,7 @@ function getCalenderURL(html){
   let urlForCalender = $(jqueryHTML).find("#region-main > div > div > div > div.bottom > a")[0].href;
   makeXHRreq(url=urlForCalender, method="GET", responseType="text")
   .then(function(calender){
-    console.log(calender);
-    let jcalData = ICAL.parse(calender.responseText);
-    let vcalendar = new ICAL.Component(jcalData);
-    let vevents = vcalendar.getAllSubcomponents('vevent');
-    for(let i=0; i<vevents.length; i++){
-      let eventToAdd = {};
-      eventToAdd.uid = vevents[i].getFirstPropertyValue("uid");
-      eventToAdd.class = vevents[i].getFirstPropertyValue("categories");
-      eventToAdd.description = vevents[i].getFirstPropertyValue("description");
-      eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
-      eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
-      eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
-      eventToAdd.done = false;
-      EVENTS.push(eventToAdd);
-    }
-    console.log(EVENTS);
+    parseCalender(calender.responseText);
   })
   .catch(function(error){
     console.log(error);
@@ -102,6 +87,10 @@ function getCalenderURL(html){
   console.log(urlForCalender);
 }
 
+
+/**
+ * @function getPageContainingURL Get the page in html which contains the URL for calender
+ */
 function getPageContainingURL(){
   let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
   makeXHRreq(url=url, method="GET", responseType="text")
@@ -111,6 +100,28 @@ function getPageContainingURL(){
   .catch(function(error){
     console.log(error);
   });
+}
+
+/**
+ * @function parseCalender Parse given calender into uid, class, description, summary, startDate, endDate and done?
+ * @param  {string} calender Calender.ics file in string format
+ */
+function parseCalender(calender){
+  let jcalData = ICAL.parse(calender);
+  let vcalendar = new ICAL.Component(jcalData);
+  let vevents = vcalendar.getAllSubcomponents('vevent');
+  for(let i=0; i<vevents.length; i++){
+    let eventToAdd = {};
+    eventToAdd.uid = vevents[i].getFirstPropertyValue("uid").replace(/[@].*/g, "");
+    eventToAdd.class = vevents[i].getFirstPropertyValue("categories");
+    eventToAdd.description = vevents[i].getFirstPropertyValue("description");
+    eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
+    eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
+    eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
+    eventToAdd.done = false;
+    // Add event to main EVENTS which holds all events.
+    EVENTS[eventToAdd.uid] = eventToAdd;
+  }
 }
 
 checkUserLogin();
