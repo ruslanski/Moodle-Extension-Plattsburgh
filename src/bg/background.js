@@ -1,12 +1,10 @@
 /* jshint esversion:6 */
-
+/* jshint -W030 */
 
 // Global Variables
 // check chrome local storage is events already exit if not set it to null.
 chrome.storage.local.get(["EVENTS"], function(events){
-  if(events.EVENTS){
-    EVENTS = events.EVENTS || {};
-  }
+  (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
 });
 
 /**
