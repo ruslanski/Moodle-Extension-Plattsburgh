@@ -1,3 +1,20 @@
+// JS for message passing
+
+// GLobal Variables
+var EVENTS = {};
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
+  if(request.request === "EVENTS LOADED"){
+    chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
+      EVENTS = response.EVENTS;
+      console.log(response);
+    });
+  }
+});
+
+
+// JS for popup
+
 $('#add-todo').click(function(){
 var lastSibling = $('#todo-list > .todo-wrap:last-of-type > input').attr('id');
 var newId = Number(lastSibling) + 1;

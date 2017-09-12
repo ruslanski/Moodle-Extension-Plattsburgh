@@ -1,15 +1,24 @@
 /* jshint esversion:6 */
 /* jshint -W030 */
 
+/**
+ * @author Jayant Arora
+ */
+
 // Global Variables
 // check chrome local storage is events already exit if not set it to null.
 chrome.storage.local.get(["EVENTS"], function(events){
   (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
 });
 
-/**
- * @author Jayant Arora
- */
+// Add listener to listen for requests to get events
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    if(request.request === "EVENTS"){
+      sendResponse({EVENTS: EVENTS});
+    }
+  }
+);
 
 /**
  * @function makeXHRreq [Make XHR requests]
@@ -127,6 +136,11 @@ function parseCalender(calender){
   }
   chrome.storage.local.set({EVENTS: EVENTS}, function(){
     console.log("Events saved to storage");
+  });
+
+  // inform popup that events are now laoded
+  chrome.runtime.sendMessage({request: "EVENTS LOADED"}, function(response){
+    console.log(response);
   });
 }
 
