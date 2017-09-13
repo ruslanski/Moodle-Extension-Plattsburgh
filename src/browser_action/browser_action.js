@@ -9,13 +9,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
     chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
       EVENTS = response.EVENTS;
       console.log(response);
-      addEventsToPopup();
     });
   }
 });
 
 function addEventsToPopup(){
-  for(let i=0; i<1; i++){
+  // for(let i=0; i<1; i++){
+  for(let key in EVENTS){
     let form = document.getElementById("todo-list");
     {
     	let span_1 = document.createElement('span');
@@ -23,17 +23,17 @@ function addEventsToPopup(){
 
     	let input_1 = document.createElement('input');
     	input_1.type = "checkbox";
-    	input_1.id = "10";
-    	input_1.checked = false;
+    	input_1.id = `${key}`;
+    	input_1.checked = EVENTS[key].done;
       span_1.appendChild(input_1);
 
     	let label_1 = document.createElement('label');
-    	label_1.htmlFor = "10";
+    	label_1.htmlFor = `${key}`;
     	label_1.className = "todo";
 
     	let i_1 = document.createElement('i');
     	i_1.className = "fa fa-check";
-      let text_1 = document.createTextNode("TESTING");
+      let text_1 = document.createTextNode(`${EVENTS[key].class.substring(0, 6)}: ${EVENTS[key].summary}`);
       label_1.appendChild(i_1);
       label_1.appendChild(text_1);
       span_1.appendChild(label_1);
@@ -54,6 +54,13 @@ function addEventsToPopup(){
 
 $(document).ready(function(){
   console.log("ready");
+  chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
+    EVENTS = response.EVENTS;
+    console.log(response);
+    addEventsToPopup();
+    console.log("doc ready add EVENTS");
+  });
+  console.log("popup ran");
 });
 
 // JS for popup
