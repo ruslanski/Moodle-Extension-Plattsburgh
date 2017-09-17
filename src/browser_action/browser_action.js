@@ -1,4 +1,5 @@
 /* jshint esversion:6 */
+/* jshint -W083 */
 // JS for message passing
 
 // GLobal Variables
@@ -13,6 +14,21 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
   }
 });
 
+function inputEventChange(input){
+  if(input.checked === true){
+    console.log(input.id, "Done");
+    chrome.runtime.sendMessage({request: "MARK DONE", id:input.id}, function(response){
+      EVENTS = response.EVENTS;
+    });
+  }
+  else{
+    console.log(input.id, "undone");
+    chrome.runtime.sendMessage({request: "MARK UNDONE", id:input.id}, function(response){
+      EVENTS = response.EVENTS;
+    });
+  }
+}
+
 function addEventsToPopup(){
   // for(let i=0; i<1; i++){
   for(let key in EVENTS){
@@ -25,6 +41,7 @@ function addEventsToPopup(){
     	input_1.type = "checkbox";
     	input_1.id = `${key}`;
     	input_1.checked = EVENTS[key].done;
+      input_1.addEventListener("change", function(){inputEventChange(input_1);});
       span_1.appendChild(input_1);
 
     	let label_1 = document.createElement('label');

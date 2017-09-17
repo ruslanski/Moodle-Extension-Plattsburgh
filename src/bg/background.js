@@ -14,8 +14,25 @@ chrome.storage.local.get(["EVENTS"], function(events){
 // Add listener to listen for requests to get events
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
+    console.log(request);
     if(request.request === "EVENTS"){
       sendResponse({EVENTS: EVENTS});
+    }
+    if(request.request === "MARK DONE"){
+      let id = request.id;
+      EVENTS[id].done = true;
+      chrome.storage.local.set({EVENTS: EVENTS}, function(){
+        sendResponse({EVENTS: EVENTS});
+        console.log("event marked as done");
+      });
+    }
+    if(request.request === "MARK UNDONE"){
+      let id = request.id;
+      EVENTS[id].done = false;
+      chrome.local.set({EVENTS: EVENTS}, function(){
+        sendResponse({EVENTS: EVENTS});
+        console.log("event marked as undone");
+      });
     }
   }
 );
