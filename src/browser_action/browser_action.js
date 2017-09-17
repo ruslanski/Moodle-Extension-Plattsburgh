@@ -9,6 +9,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
   if(request.request === "EVENTS LOADED"){
     chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
       EVENTS = response.EVENTS;
+      if(Object.keys(EVENTS).length !== 0){
+        addEventsToPopup();
+      }
       console.log(response);
     });
   }
@@ -87,15 +90,22 @@ function addEventsToPopup(){
       form.appendChild(div_0);
     }
   }
-  document.getElementsByTagName("body")[0].style.display = "block";
+  setTimeout(function(){
+    // document.getElementsByTagName("body")[0].style.display = "block";
+    document.getElementById("mainPopup").style.display = "block";
+    $("#loading").fadeOut("slow");
+  }, 200);
 }
 
 chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
   EVENTS = response.EVENTS;
   console.log(response);
-  addEventsToPopup();
+  if(Object.keys(EVENTS).length !== 0){
+    addEventsToPopup();
+  }
   console.log("doc ready add EVENTS");
 });
+
 
 // JS for popup
 

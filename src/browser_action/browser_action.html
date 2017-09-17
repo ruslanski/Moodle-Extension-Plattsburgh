@@ -11,17 +11,27 @@
 		padding: 10px;
 		height: auto;
 		width: auto;
-		min-height: 300px;
-		overflow: hidden;
+		min-height: 200px;
+		/*overflow: hidden;*/
 		font-family: Helvetica, Ubuntu, Arial, sans-serif;
 	}
 
 	h1 {
 		font-size: 2em;
 	}
+
+	#loading {
+	position: fixed;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	z-index: 999999;
+	background: url(loading.gif) center no-repeat #fff;
+}
 </style>
-<body style="display:none">
-	<div id="mainPopup">
+<body >
+	<div id="mainPopup" style="display:none">
 		<div style="overflow-y:scroll;">
 			<form id="todo-list" style="overflow-y:scroll;">
 				<!-- <div id="add-todo">
@@ -29,6 +39,9 @@
 				</div> -->
 			</div>
 		</form>
+	</div>
+	<div id="loading">
+
 	</div>
 </body>
 
