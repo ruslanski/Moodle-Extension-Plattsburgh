@@ -11,6 +11,10 @@ chrome.storage.local.get(["EVENTS"], function(events){
   (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
 });
 
+chrome.storage.local.get(["EVENTS_TEST"], function(events){
+  (events.EVENTS_TEST !== undefined) ? (EVENTS_TEST = events.EVENTS_TEST) : EVENTS_TEST = {};
+});
+
 // Add listener to listen for requests to get events
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
@@ -147,9 +151,18 @@ function parseCalender(calender){
     eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
     eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
     eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
+    eventToAdd.endDateJSON = vevents[i].getFirstPropertyValue("dtend").toJSON();
+    eventToAdd.endDateUnix = vevents[i].getFirstPropertyValue("dtend").toUnixTime();
     eventToAdd.done = false;
     // Add event to main EVENTS which holds all events.
     EVENTS[eventToAdd.uid] = eventToAdd;
+    if(EVENTS_TEST[eventToAdd.endDateUnix]){
+      EVENTS_TEST[eventToAdd.endDateUnix].push(eventToAdd);
+    }
+    else{
+      EVENTS_TEST[eventToAdd.endDateUnix] = [];
+      EVENTS_TEST[eventToAdd.endDateUnix].push(eventToAdd);
+    }
   }
   chrome.storage.local.set({EVENTS: EVENTS}, function(){
     console.log("Events saved to storage");

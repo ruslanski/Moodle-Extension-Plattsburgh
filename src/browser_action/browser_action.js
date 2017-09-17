@@ -64,20 +64,37 @@ function addEventsToPopup(){
       span_2.appendChild(i_2);
       span_1.appendChild(span_2);
 
-      form.insertBefore(span_1, form.children[form.children.length - 1]);
+      if(document.getElementById("add-todo") !== null){
+        form.insertBefore(span_1, form.children[form.children.length - 1]);
+      }
+      else{
+        form.appendChild(span_1);
+      }
     }
   }
+  if(document.getElementById("add-todo") === null){
+    let form = document.getElementById("todo-list");
+    {
+    	let div_0 = document.createElement('div');
+    	div_0.id = "add-todo";
+      {
+  	    let i_0 = document.createElement('i');
+  	    i_0.className = "fa fa-plus";
+        let text_0 = document.createTextNode("Add a new event..");
+        i_0.appendChild(text_0);
+        div_0.appendChild(i_0);
+      }
+      form.appendChild(div_0);
+    }
+  }
+  document.getElementsByTagName("body")[0].style.display = "block";
 }
 
-$(document).ready(function(){
-  console.log("ready");
-  chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
-    EVENTS = response.EVENTS;
-    console.log(response);
-    addEventsToPopup();
-    console.log("doc ready add EVENTS");
-  });
-  console.log("popup ran");
+chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
+  EVENTS = response.EVENTS;
+  console.log(response);
+  addEventsToPopup();
+  console.log("doc ready add EVENTS");
 });
 
 // JS for popup

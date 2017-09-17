@@ -1,7 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
+<html>
 <head>
 	<link rel="stylesheet" href="browser_action.css" />
-	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" type="text/css">
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" type="text/css" />
 	<script src="../../js/jquery/jquery.min.js"></script>
 	<script src="browser_action.js"></script>
 </head>
@@ -10,22 +11,25 @@
 		padding: 10px;
 		height: auto;
 		width: auto;
+		min-height: 300px;
+		overflow: hidden;
 		font-family: Helvetica, Ubuntu, Arial, sans-serif;
 	}
 
 	h1 {
 		font-size: 2em;
 	}
-	}
 </style>
-<div id="mainPopup">
-	<div style="overflow-y:scroll;">
-		<form id="todo-list" style="overflow-y:scroll;">
-			<div id="add-todo">
-				<i class="fa fa-plus"></i> Add an Item
+<body style="display:none">
+	<div id="mainPopup">
+		<div style="overflow-y:scroll;">
+			<form id="todo-list" style="overflow-y:scroll;">
+				<!-- <div id="add-todo">
+					<i class="fa fa-plus"></i> Add an Item
+				</div> -->
 			</div>
-		</div>
-	</form>
-</div>
+		</form>
+	</div>
+</body>
 
 </html>
