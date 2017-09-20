@@ -35,43 +35,45 @@ function inputEventChange(input){
 function addEventsToPopup(){
   // for(let i=0; i<1; i++){
   for(let key in EVENTS){
-    let form = document.getElementById("todo-list");
-    {
-    	let span_1 = document.createElement('span');
-    	span_1.className = "todo-wrap";
+    if(document.getElementById(`${key}`) === null){
+      let form = document.getElementById("todo-list");
+      {
+      	let span_1 = document.createElement('span');
+      	span_1.className = "todo-wrap";
 
-    	let input_1 = document.createElement('input');
-    	input_1.type = "checkbox";
-    	input_1.id = `${key}`;
-    	input_1.checked = EVENTS[key].done;
-      input_1.addEventListener("change", function(){inputEventChange(input_1);});
-      span_1.appendChild(input_1);
+      	let input_1 = document.createElement('input');
+      	input_1.type = "checkbox";
+      	input_1.id = `${key}`;
+      	input_1.checked = EVENTS[key].done;
+        input_1.addEventListener("change", function(){inputEventChange(input_1);});
+        span_1.appendChild(input_1);
 
-    	let label_1 = document.createElement('label');
-    	label_1.htmlFor = `${key}`;
-    	label_1.className = "todo";
+      	let label_1 = document.createElement('label');
+      	label_1.htmlFor = `${key}`;
+      	label_1.className = "todo";
 
-    	let i_1 = document.createElement('i');
-    	i_1.className = "fa fa-check";
-      let text_1 = document.createTextNode(`${EVENTS[key].class.substring(0, 6)}: ${EVENTS[key].summary}`);
-      label_1.appendChild(i_1);
-      label_1.appendChild(text_1);
-      span_1.appendChild(label_1);
+      	let i_1 = document.createElement('i');
+      	i_1.className = "fa fa-check";
+        let text_1 = document.createTextNode(`${EVENTS[key].class.substring(0, 6)}: ${EVENTS[key].summary}`);
+        label_1.appendChild(i_1);
+        label_1.appendChild(text_1);
+        span_1.appendChild(label_1);
 
-    	let span_2 = document.createElement('span');
-    	span_2.className = "delete-item";
-    	span_2.title = "remove";
+      	let span_2 = document.createElement('span');
+      	span_2.className = "delete-item";
+      	span_2.title = "remove";
 
-    	let i_2 = document.createElement('i');
-    	i_2.className = "fa fa-times-circle";
-      span_2.appendChild(i_2);
-      span_1.appendChild(span_2);
+      	let i_2 = document.createElement('i');
+      	i_2.className = "fa fa-times-circle";
+        span_2.appendChild(i_2);
+        span_1.appendChild(span_2);
 
-      if(document.getElementById("add-todo") !== null){
-        form.insertBefore(span_1, form.children[form.children.length - 1]);
-      }
-      else{
-        form.appendChild(span_1);
+        if(document.getElementById("add-todo") !== null){
+          form.insertBefore(span_1, form.children[form.children.length - 1]);
+        }
+        else{
+          form.appendChild(span_1);
+        }
       }
     }
   }
@@ -106,6 +108,11 @@ chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
   console.log("doc ready add EVENTS");
 });
 
+$("#refresh_button").on("click", function refreshEvents(){
+  chrome.runtime.sendMessage({request: "REFRESH"}, function(response){
+    console.log(response.STATUS);
+  });
+});
 
 // JS for popup
 

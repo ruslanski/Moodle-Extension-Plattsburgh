@@ -5,6 +5,9 @@
  * @author Jayant Arora
  */
 
+// add badge to denote testing
+chrome.browserAction.setBadgeText({text:"b"});
+
 // Global Variables
 // check chrome local storage is events already exit if not set it to null.
 chrome.storage.local.get(["EVENTS"], function(events){
@@ -37,6 +40,10 @@ chrome.runtime.onMessage.addListener(
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as undone");
       });
+    }
+    if(request.request === "REFRESH"){
+      checkUserLogin();
+      sendResponse({STATUS: "Refresh initialized"});
     }
   }
 );
@@ -74,7 +81,7 @@ function checkUserLogin(){
       console.log("Send user notification to log in");
       // if the user is not logged in send a notification.
       // TODO: Open a new tab to ask the user to log in to cas.
-      makeChromeNotification(type="basic", iconURL="../../icons/icon128.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.");
+      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.");
     }
     else{
       console.log("Some error occured!");
