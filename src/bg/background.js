@@ -6,7 +6,7 @@
  */
 
 // add badge to denote testing
-chrome.browserAction.setBadgeText({text:"b"});
+chrome.browserAction.setBadgeText({text:"a"});
 
 // Global Variables
 // check chrome local storage is events already exit if not set it to null.

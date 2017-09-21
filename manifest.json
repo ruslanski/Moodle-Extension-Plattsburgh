@@ -1,6 +1,6 @@
 {
   "name": "Moodle",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "manifest_version": 2,
   "description": "Moodle",
   "homepage_url": "http://www.jayantarora.com",
@@ -20,7 +20,7 @@
   },
   "browser_action": {
     "default_icon": "icons/icon.png",
-    "default_title": "Moodle Plattsburgh (Beta)",
+    "default_title": "Moodle Plattsburgh (Alpha)",
     "default_popup": "src/browser_action/browser_action.html"
   },
   "permissions": [
