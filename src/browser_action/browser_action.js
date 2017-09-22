@@ -41,101 +41,59 @@ function addEventsToPopup(){
     for(let day in monthEvents){
       let dayEvents = monthEvents[day];
       console.log(`${day}, ${month}, ${currentYear}`);
-      let divWrap = document.createElement('div');
       let fullDate = `${month}/${day}/${currentYear}`;
-      let h_1 = document.createElement("h4");
-      let fullDateText = document.createTextNode(fullDate);
-      h_1.appendChild(fullDateText);
-      h_1.style.textAlign = "center";
-      divWrap.appendChild(h_1);
-      for(let eventDay in dayEvents){
-          console.log(dayEvents[eventDay]);
-          {
-            divWrap.dataset.date = fullDate;
-          	let span_1 = document.createElement('span');
-          	span_1.className = "todo-wrap";
+      if(document.querySelector(`[data-date="${fullDate}"]`) == null){
+        let divWrap = document.createElement('div');
+        let h_1 = document.createElement("h4");
+        let fullDateText = document.createTextNode(fullDate);
+        h_1.appendChild(fullDateText);
+        h_1.style.textAlign = "center";
+        divWrap.appendChild(h_1);
+        for(let eventDay in dayEvents){
+            console.log(dayEvents[eventDay]);
+            {
+              divWrap.dataset.date = fullDate;
+              let span_1 = document.createElement('span');
+              span_1.className = "todo-wrap";
 
-          	let input_1 = document.createElement('input');
-          	input_1.type = "checkbox";
-          	input_1.id = `${eventDay}`;
-          	input_1.checked = dayEvents[eventDay].done;
-            input_1.addEventListener("change", function(){inputEventChange(input_1);});
-            span_1.appendChild(input_1);
+              let input_1 = document.createElement('input');
+              input_1.type = "checkbox";
+              input_1.id = `${eventDay}`;
+              input_1.checked = dayEvents[eventDay].done;
+              input_1.addEventListener("change", function(){inputEventChange(input_1);});
+              span_1.appendChild(input_1);
 
-          	let label_1 = document.createElement('label');
-          	label_1.htmlFor = `${eventDay}`;
-          	label_1.className = "todo";
+              let label_1 = document.createElement('label');
+              label_1.htmlFor = `${eventDay}`;
+              label_1.className = "todo";
 
-          	let i_1 = document.createElement('i');
-          	i_1.className = "fa fa-check";
-            let text_1 = document.createTextNode(`${dayEvents[eventDay].class.substring(0, 6)}: ${dayEvents[eventDay].summary}`);
-            label_1.appendChild(i_1);
-            label_1.appendChild(text_1);
-            span_1.appendChild(label_1);
+              let i_1 = document.createElement('i');
+              i_1.className = "fa fa-check";
+              let text_1 = document.createTextNode(`${dayEvents[eventDay].class.substring(0, 6)}: ${dayEvents[eventDay].summary}`);
+              label_1.appendChild(i_1);
+              label_1.appendChild(text_1);
+              span_1.appendChild(label_1);
 
-          	let span_2 = document.createElement('span');
-          	span_2.className = "delete-item";
-          	span_2.title = "remove";
+              let span_2 = document.createElement('span');
+              span_2.className = "delete-item";
+              span_2.title = "remove";
 
-          	let i_2 = document.createElement('i');
-          	i_2.className = "fa fa-times-circle";
-            span_2.appendChild(i_2);
-            span_1.appendChild(span_2);
-            divWrap.appendChild(span_1);
-            if(document.getElementById("add-todo") !== null){
-              form.insertBefore(divWrap, form.children[form.children.length - 1]);
-            }
-            else{
-              form.appendChild(divWrap);
+              let i_2 = document.createElement('i');
+              i_2.className = "fa fa-times-circle";
+              span_2.appendChild(i_2);
+              span_1.appendChild(span_2);
+              divWrap.appendChild(span_1);
+              if(document.getElementById("add-todo") !== null){
+                form.insertBefore(divWrap, form.children[form.children.length - 1]);
+              }
+              else{
+                form.appendChild(divWrap);
+              }
             }
           }
-        }
       }
     }
-  // for(let i=0; i<1; i++){
-  // for(let key in EVENTS){
-  //   if(document.getElementById(`${key}`) === null){
-  //     let form = document.getElementById("todo-list");
-  //     {
-  //     	let span_1 = document.createElement('span');
-  //     	span_1.className = "todo-wrap";
-  //
-  //     	let input_1 = document.createElement('input');
-  //     	input_1.type = "checkbox";
-  //     	input_1.id = `${key}`;
-  //     	input_1.checked = EVENTS[key].done;
-  //       input_1.addEventListener("change", function(){inputEventChange(input_1);});
-  //       span_1.appendChild(input_1);
-  //
-  //     	let label_1 = document.createElement('label');
-  //     	label_1.htmlFor = `${key}`;
-  //     	label_1.className = "todo";
-  //
-  //     	let i_1 = document.createElement('i');
-  //     	i_1.className = "fa fa-check";
-  //       let text_1 = document.createTextNode(`${EVENTS[key].class.substring(0, 6)}: ${EVENTS[key].summary}`);
-  //       label_1.appendChild(i_1);
-  //       label_1.appendChild(text_1);
-  //       span_1.appendChild(label_1);
-  //
-  //     	let span_2 = document.createElement('span');
-  //     	span_2.className = "delete-item";
-  //     	span_2.title = "remove";
-  //
-  //     	let i_2 = document.createElement('i');
-  //     	i_2.className = "fa fa-times-circle";
-  //       span_2.appendChild(i_2);
-  //       span_1.appendChild(span_2);
-  //
-  //       if(document.getElementById("add-todo") !== null){
-  //         form.insertBefore(span_1, form.children[form.children.length - 1]);
-  //       }
-  //       else{
-  //         form.appendChild(span_1);
-  //       }
-  //     }
-  //   }
-  // }
+  }
   // if(document.getElementById("add-todo") === null){
   //   let form = document.getElementById("todo-list");
   //   {
@@ -155,6 +113,9 @@ function addEventsToPopup(){
     // document.getElementsByTagName("body")[0].style.display = "block";
     document.getElementById("mainPopup").style.display = "block";
     $("#loading").fadeOut("slow");
+    let today_date = new Date();
+    let today_date_data = `${today_date.getMonth()+1}/${today_date.getDate()}/${today_date.getFullYear()}`;
+    $(window).scrollTop($(`[data-date="${today_date_data}"`).offset().top);
   }, 200);
 }
 
@@ -167,9 +128,11 @@ chrome.runtime.sendMessage({request: "EVENTS"}, function(response){
   console.log("doc ready add EVENTS");
 });
 
-$("#refresh_button").on("click", function refreshEvents(){
-  chrome.runtime.sendMessage({request: "REFRESH"}, function(response){
-    console.log(response.STATUS);
+$(document).ready(function(){
+  $("#refresh_button").on("click", function refreshEvents(e){
+    chrome.runtime.sendMessage({request: "REFRESH"}, function(response){
+      console.log(response.STATUS);
+    });
   });
 });
 
