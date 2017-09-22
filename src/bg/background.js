@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
     console.log(request);
     if(request.request === "EVENTS"){
-      sendResponse({EVENTS: EVENTS});
+      sendResponse({EVENTS: EVENTS_TEST});
     }
     if(request.request === "MARK DONE"){
       let id = request.id;
@@ -192,7 +192,7 @@ function parseCalender(calender){
     }
     // [eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
   }
-  chrome.storage.local.set({EVENTS: EVENTS}, function(){
+  chrome.storage.local.set({EVENTS_TEST: EVENTS_TEST}, function(){
     console.log("Events saved to storage");
   });
 
