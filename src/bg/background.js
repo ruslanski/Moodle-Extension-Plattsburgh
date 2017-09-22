@@ -27,7 +27,10 @@ chrome.runtime.onMessage.addListener(
     }
     if(request.request === "MARK DONE"){
       let id = request.id;
-      EVENTS[id].done = true;
+      let year = request.year;
+      let month = request.month;
+      let day = request.day;
+      EVENTS[year][month][day][id].done = true;
       chrome.storage.local.set({EVENTS: EVENTS}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as done");
@@ -35,7 +38,10 @@ chrome.runtime.onMessage.addListener(
     }
     if(request.request === "MARK UNDONE"){
       let id = request.id;
-      EVENTS[id].done = false;
+      let year = request.year;
+      let month = request.month;
+      let day = request.day;
+      EVENTS[year][month][day][id].done = false;
       chrome.storage.local.set({EVENTS: EVENTS}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as undone");
@@ -207,5 +213,13 @@ function parseCalender(calender){
     console.log(response);
   });
 }
+
+// create an alarm to run checkUserLogin again every 3 hours
+chrome.alarms.create("REFRESH MOODLE EVENTS", {periodInMinutes: 180});
+
+// set up code to run when alarm is fired
+chrome.alarms.onAlarm.addListener(function(){
+  checkUserLogin();
+});
 
 checkUserLogin();

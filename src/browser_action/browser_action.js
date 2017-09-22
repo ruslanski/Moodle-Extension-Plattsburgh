@@ -4,6 +4,8 @@
 
 // GLobal Variables
 var EVENTS = {};
+var WEEKDAY = {0:"Sunday", 1:"Monday", 2:"Tuesday", 3:"Wednesday", 4:"Thursday", 5:"Friday", 6:"Saturday"};
+var MONTHS = {1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"Jun", 7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"};
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
   if(request.request === "EVENTS LOADED"){
@@ -20,13 +22,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 function inputEventChange(input){
   if(input.checked === true){
     console.log(input.id, "Done");
-    chrome.runtime.sendMessage({request: "MARK DONE", id:input.id}, function(response){
+    chrome.runtime.sendMessage({request: "MARK DONE", id:input.id, day:input.dataset.day, month:input.dataset.month, year:input.dataset.year}, function(response){
       EVENTS = response.EVENTS;
     });
   }
   else{
     console.log(input.id, "undone");
-    chrome.runtime.sendMessage({request: "MARK UNDONE", id:input.id}, function(response){
+    chrome.runtime.sendMessage({request: "MARK UNDONE", id:input.id, day:input.dataset.day, month:input.dataset.month, year:input.dataset.year}, function(response){
       EVENTS = response.EVENTS;
     });
   }
@@ -40,17 +42,17 @@ function addEventsToPopup(){
     let form = document.getElementById("todo-list");
     for(let day in monthEvents){
       let dayEvents = monthEvents[day];
-      console.log(`${day}, ${month}, ${currentYear}`);
+      // console.log(`${day}, ${month}, ${currentYear}`);
       let fullDate = `${month}/${day}/${currentYear}`;
       if(document.querySelector(`[data-date="${fullDate}"]`) == null){
         let divWrap = document.createElement('div');
         let h_1 = document.createElement("h4");
-        let fullDateText = document.createTextNode(fullDate);
+        let fullDateText = document.createTextNode(`${WEEKDAY[new Date(fullDate).getDay()]} ${MONTHS[month]} ${day}`);
         h_1.appendChild(fullDateText);
         h_1.style.textAlign = "center";
         divWrap.appendChild(h_1);
         for(let eventDay in dayEvents){
-            console.log(dayEvents[eventDay]);
+            // console.log(dayEvents[eventDay]);
             {
               divWrap.dataset.date = fullDate;
               let span_1 = document.createElement('span');
@@ -59,6 +61,9 @@ function addEventsToPopup(){
               let input_1 = document.createElement('input');
               input_1.type = "checkbox";
               input_1.id = `${eventDay}`;
+              input_1.dataset.day = day;
+              input_1.dataset.month = month;
+              input_1.dataset.year = currentYear;
               input_1.checked = dayEvents[eventDay].done;
               input_1.addEventListener("change", function(){inputEventChange(input_1);});
               span_1.appendChild(input_1);
@@ -74,14 +79,15 @@ function addEventsToPopup(){
               label_1.appendChild(text_1);
               span_1.appendChild(label_1);
 
-              let span_2 = document.createElement('span');
-              span_2.className = "delete-item";
-              span_2.title = "remove";
-
-              let i_2 = document.createElement('i');
-              i_2.className = "fa fa-times-circle";
-              span_2.appendChild(i_2);
-              span_1.appendChild(span_2);
+              // TODO: make delete-item working
+              // let span_2 = document.createElement('span');
+              // span_2.className = "delete-item";
+              // span_2.title = "remove";
+              //
+              // let i_2 = document.createElement('i');
+              // i_2.className = "fa fa-times-circle";
+              // span_2.appendChild(i_2);
+              // span_1.appendChild(span_2);
               divWrap.appendChild(span_1);
               if(document.getElementById("add-todo") !== null){
                 form.insertBefore(divWrap, form.children[form.children.length - 1]);
@@ -115,7 +121,9 @@ function addEventsToPopup(){
     $("#loading").fadeOut("slow");
     let today_date = new Date();
     let today_date_data = `${today_date.getMonth()+1}/${today_date.getDate()}/${today_date.getFullYear()}`;
-    $(window).scrollTop($(`[data-date="${today_date_data}"`).offset().top);
+    let $currentEvent = $(`[data-date="${today_date_data}"`);
+    $(window).scrollTop($currentEvent.offset().top - 50);
+    $currentEvent.addClass("highlight_on_load");
   }, 200);
 }
 

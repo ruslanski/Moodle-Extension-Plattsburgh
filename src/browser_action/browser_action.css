@@ -226,3 +226,7 @@ width:100%;
 .editing.todo-wrap {
   box-shadow:0 0 400px rgba(0,0,0,.8),inset 0 0px 0 2px #ebebeb;
 }
+
+.highlight_on_load {
+    border: 2px solid #0eb0b7;
+}
