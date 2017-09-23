@@ -14,6 +14,8 @@ chrome.storage.local.get(["EVENTS"], function(events){
   (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
 });
 
+var EVENT_NEED_FIX = {};
+
 // chrome.storage.local.get(["EVENTS_TEST"], function(events){
 //   (events.EVENTS_TEST !== undefined) ? (EVENTS_TEST = events.EVENTS_TEST) : EVENTS_TEST = {};
 // });
@@ -166,6 +168,12 @@ function parseCalender(calender){
     eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
     eventToAdd.endDateJSON = vevents[i].getFirstPropertyValue("dtend").toJSON();
     eventToAdd.endDateUnix = vevents[i].getFirstPropertyValue("dtend").toUnixTime();
+
+    // Test is the event has a valid due date.
+    if(eventToAdd.endDateJSON.timezone === "floating" || eventToAdd.endDateJSON.isDate === true){
+      EVENT_NEED_FIX[eventToAdd.uid] = eventToAdd.endDateJSON;
+    }
+
     // if(EVENTS[eventToAdd.uid]){
     //   eventToAdd.done = EVENTS[eventToAdd.uid].done;
     // }
@@ -204,6 +212,10 @@ function parseCalender(calender){
     }
     // [eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
   }
+
+  // call function to fix dates for those who have faulty dates
+  scrapeEventTime();
+
   chrome.storage.local.set({EVENTS: EVENTS}, function(){
     console.log("Events saved to storage");
   });
@@ -221,5 +233,26 @@ chrome.alarms.create("REFRESH MOODLE EVENTS", {periodInMinutes: 180});
 chrome.alarms.onAlarm.addListener(function(){
   checkUserLogin();
 });
+
+/**
+ * @function scrapeEventTime scrape page if event time is available
+ * @return {[type]} [description]
+ */
+function scrapeEventTime(){
+  let currentTime = Math.floor(new Date().getTime() / 1000);
+  makeXHRreq(`https://moodle.plattsburgh.edu/calendar/view.php?view=month&time=${currentTime}&course=1`, "GET", "text")
+  .then(function(monthPage){
+    console.log(monthPage);
+    for(let uid in EVENT_NEED_FIX){
+      let tempURL = monthPage.response.match(new RegExp("https:\/\/moodle\.plattsburgh\.edu\/calendar\/view\.php\\?view=day&amp;course=1&amp;time=[0-9]*#event_"+uid));
+      if(tempURL){
+          console.log(tempURL[0]);
+      }
+    }
+  })
+  .catch(function(error){
+    console.log("Error in scrapeEventTime: ", error);
+  });
+}
 
 checkUserLogin();
