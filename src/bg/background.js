@@ -14,9 +14,9 @@ chrome.storage.local.get(["EVENTS"], function(events){
   (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
 });
 
-chrome.storage.local.get(["EVENTS_TEST"], function(events){
-  (events.EVENTS_TEST !== undefined) ? (EVENTS_TEST = events.EVENTS_TEST) : EVENTS_TEST = {};
-});
+// chrome.storage.local.get(["EVENTS_TEST"], function(events){
+//   (events.EVENTS_TEST !== undefined) ? (EVENTS_TEST = events.EVENTS_TEST) : EVENTS_TEST = {};
+// });
 
 // Add listener to listen for requests to get events
 chrome.runtime.onMessage.addListener(
@@ -27,7 +27,10 @@ chrome.runtime.onMessage.addListener(
     }
     if(request.request === "MARK DONE"){
       let id = request.id;
-      EVENTS[id].done = true;
+      let year = request.year;
+      let month = request.month;
+      let day = request.day;
+      EVENTS[year][month][day][id].done = true;
       chrome.storage.local.set({EVENTS: EVENTS}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as done");
@@ -35,7 +38,10 @@ chrome.runtime.onMessage.addListener(
     }
     if(request.request === "MARK UNDONE"){
       let id = request.id;
-      EVENTS[id].done = false;
+      let year = request.year;
+      let month = request.month;
+      let day = request.day;
+      EVENTS[year][month][day][id].done = false;
       chrome.storage.local.set({EVENTS: EVENTS}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as undone");
@@ -160,35 +166,41 @@ function parseCalender(calender){
     eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
     eventToAdd.endDateJSON = vevents[i].getFirstPropertyValue("dtend").toJSON();
     eventToAdd.endDateUnix = vevents[i].getFirstPropertyValue("dtend").toUnixTime();
-    if(EVENTS[eventToAdd.uid]){
-      eventToAdd.done = EVENTS[eventToAdd.uid].done;
-    }
-    else{
-      eventToAdd.done = false;
-    }
-    // Add event to main EVENTS which holds all events.
-    EVENTS[eventToAdd.uid] = eventToAdd;
-    if(EVENTS_TEST[eventToAdd.endDateJSON.year]){
-      if(EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
-        if(EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
-          EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+    // if(EVENTS[eventToAdd.uid]){
+    //   eventToAdd.done = EVENTS[eventToAdd.uid].done;
+    // }
+    // else{
+    //   eventToAdd.done = false;
+    // }
+    // // Add event to main EVENTS which holds all events.
+    // EVENTS[eventToAdd.uid] = eventToAdd;
+    if(EVENTS[eventToAdd.endDateJSON.year]){
+      if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
+        if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
+          if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid]){
+            eventToAdd.done = EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid].done;
+          }
+          else{
+            eventToAdd.done = false;
+          }
+          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
         else{
-          EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-          EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
       }
       else{
-        EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
-        EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-        EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
+        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
       }
     }
     else{
-      EVENTS_TEST[eventToAdd.endDateJSON.year] = {};
-      EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
-      EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-      EVENTS_TEST[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+      EVENTS[eventToAdd.endDateJSON.year] = {};
+      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
+      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
     }
     // [eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
   }
@@ -201,5 +213,13 @@ function parseCalender(calender){
     console.log(response);
   });
 }
+
+// create an alarm to run checkUserLogin again every 3 hours
+chrome.alarms.create("REFRESH MOODLE EVENTS", {periodInMinutes: 180});
+
+// set up code to run when alarm is fired
+chrome.alarms.onAlarm.addListener(function(){
+  checkUserLogin();
+});
 
 checkUserLogin();
