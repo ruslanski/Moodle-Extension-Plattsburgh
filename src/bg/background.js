@@ -244,9 +244,29 @@ function scrapeEventTime(){
   .then(function(monthPage){
     console.log(monthPage);
     for(let uid in EVENT_NEED_FIX){
-      let tempURL = monthPage.response.match(new RegExp("https:\/\/moodle\.plattsburgh\.edu\/calendar\/view\.php\\?view=day&amp;course=1&amp;time=[0-9]*#event_"+uid));
+      let tempURL = monthPage.responseText.match(new RegExp("https:\/\/moodle\.plattsburgh\.edu\/calendar\/view\.php\\?view=day&amp;course=1&amp;time=[0-9]*#event_"+uid));
       if(tempURL){
-          console.log(tempURL[0]);
+        tempURL[0] = tempURL[0].replace(/&amp;/g, "&");
+        makeXHRreq(tempURL[0], "GET", "text")
+        .then(function(pageWithEvent){
+          let $pageWithEvent = $.parseHTML(pageWithEvent.responseText);
+          let eventURL = $($pageWithEvent).find(`#event_${uid} > div > div.box.card-header.clearfix > h3 > a`)[0].href;
+          makeXHRreq(eventURL, "GET", "text")
+          .then(function(actualEventPage){
+            console.log(eventURL);
+            let $event = $.parseHTML(actualEventPage.responseText);
+            let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
+            let convertDateToUniversal = (new Date(eventDate)).toJSON();
+            let jsonDate = ICAL.Time.fromDateTimeString(convertDateToUniversal).toJSON();
+            console.log(jsonDate);
+          })
+          .catch(function(error){
+            console.log(error);
+          });
+        })
+        .catch(function(error){
+          console.log(error);
+        });
       }
     }
   })
