@@ -56,6 +56,8 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
+// loadScript("https://cdnjs.cloudflare.com/ajax/libs/q.js/2.0.3/q.min.js");
+
 /**
  * @function makeXHRreq [Make XHR requests]
  * @param  {string} url          [The url that for which xhr needs to be called]
@@ -248,52 +250,44 @@ function scrapeEventTime(){
   makeXHRreq(`https://moodle.plattsburgh.edu/calendar/view.php?view=month&time=${currentTime}&course=1`, "GET", "text")
   .then(function(monthPage){
     console.log(monthPage);
-    for(let uid in EVENT_NEED_FIX){
+    let listofpromisesForEventURL = Object.keys(EVENT_NEED_FIX).map(function(uid){
       let tempURL = monthPage.responseText.match(new RegExp("https:\/\/moodle\.plattsburgh\.edu\/calendar\/view\.php\\?view=day&amp;course=1&amp;time=[0-9]*#event_"+uid));
-
       // test if the event is available as we are only scraping page for this month.
       // there are some events that belong to other months and it is a waste of computation to scrape them
       // when they are not event needed
       if(tempURL){
         let linkToPageWithEvents = tempURL[0].replace(/&amp;/g, "&");
-        // scrapeListOfEventsPage(linkToPageWithEvents, uid);
-        makeXHRreq(linkToPageWithEvents, "GET", "text")
-        .then(function(pageWithEvent){
-          let $pageWithEvent = $.parseHTML(pageWithEvent.responseText);
-          var eventURL = $($pageWithEvent).find(`#event_${uid} > div > div.box.card-header.clearfix > h3 > a`)[0].href;
-          console.log(eventURL);
-          return eventURL;
-          // getDueDateFromEventPage(eventURL, idOfEvent);
-        })
-        // .catch(function(error){
-        //   console.log(error);
-        // })
-        // scrape page containing actual event
-        .then(function(actualEventPageURL){
-          makeXHRreq(actualEventPageURL, "GET", "text")
-          .then(function(actualEventPage){
-            let $event = $.parseHTML(actualEventPage.responseText);
-            let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
-            console.log(eventDate);
-            let convertDateToUniversal = (new Date(eventDate)).toJSON();
-            let jsonDate = ICAL.Time.fromDateTimeString(convertDateToUniversal).toJSON();
-            EVENT_NEED_FIX[uid].newDate = jsonDate;
-            console.log(jsonDate);
-          })
-          .catch(function(error){
-            console.log(error);
-          });
-         }
-        )
-        .catch(function(error){
-          console.log(error);
-        });
+        return scrapeListOfEventsPage(linkToPageWithEvents, uid);
       }
-    }
-    // console.log(EVENT_NEED_FIX);
-  })
-  .then(function(){
-    console.log(EVENT_NEED_FIX);
+      else{
+        return undefined;
+      }
+    });
+
+    Q.allSettled(listofpromisesForEventURL)
+    .then(function(eventUrlWithID){
+      // console.log(eventUrlWithID);
+      let scraptedDates =  eventUrlWithID.map(function(idAndUrl){
+        if(idAndUrl.state === "fulfilled" && idAndUrl.value !== undefined){
+          return getDueDateFromEventPage(idAndUrl.value[1], idAndUrl.value[0]);
+        }
+      });
+      Q.allSettled(scraptedDates)
+      .then(function(jsonDate){
+        jsonDate.forEach(function(jsDate){
+          if(jsDate.state === "fulfilled" && jsDate.value !== undefined){
+            EVENT_NEED_FIX[jsDate.value[1]].newDate = jsDate.value[0];
+          }
+        });
+        console.log(EVENT_NEED_FIX);
+      })
+      .catch(function(error){
+        console.log("Error: ", error);
+      });
+    })
+    .catch(function(error){
+      console.log("error getting event url with id: ", error);
+    });
   })
   .catch(function(error){
     console.log("Error in scrapeEventTime: ", error);
@@ -306,36 +300,23 @@ function scrapeEventTime(){
  * @param {string} idOfEvent ID of the event for which link needs to be scraped
  */
 function scrapeListOfEventsPage(linkToPageWithEvents, idOfEvent){
-  makeXHRreq(linkToPageWithEvents, "GET", "text")
-  .then(function(pageWithEvent){
-    let $pageWithEvent = $.parseHTML(pageWithEvent.responseText);
-    var eventURL = $($pageWithEvent).find(`#event_${idOfEvent} > div > div.box.card-header.clearfix > h3 > a`)[0].href;
-    console.log(eventURL);
-    return eventURL;
+    // return eventURL;
+    return new Promise(function(resolve, reject){
+      makeXHRreq(linkToPageWithEvents, "GET", "text")
+      .then(function(pageWithEvent){
+        let $pageWithEvent = $.parseHTML(pageWithEvent.responseText);
+        let eventURL = $($pageWithEvent).find(`#event_${idOfEvent} > div > div.box.card-header.clearfix > h3 > a`)[0].href;
+        if(eventURL){
+          resolve([idOfEvent, eventURL]);
+        }
+        else{
+          reject("Event Url not found");
+        }
+      })
+      .catch(function(error){
+        console.log(error);
+      });
     // getDueDateFromEventPage(eventURL, idOfEvent);
-  })
-  .catch(function(error){
-    console.log(error);
-  })
-  // scrape page containing actual event
-  .then(function(actualEventPageURL){
-    makeXHRreq(actualEventPageURL, "GET", "text")
-    .then(function(actualEventPage){
-      let $event = $.parseHTML(actualEventPage.responseText);
-      let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
-      console.log(eventDate);
-      let convertDateToUniversal = (new Date(eventDate)).toJSON();
-      let jsonDate = ICAL.Time.fromDateTimeString(convertDateToUniversal).toJSON();
-      EVENT_NEED_FIX[idOfEvent].newDate = jsonDate;
-      console.log(jsonDate);
-    })
-    .catch(function(error){
-      console.log(error);
-    });
-   }
-  )
-  .catch(function(error){
-    console.log(error);
   });
 }
 
@@ -345,19 +326,41 @@ function scrapeListOfEventsPage(linkToPageWithEvents, idOfEvent){
  * @param {string} idOfEvent ID of the event for which link needs to be scraped
  */
 function getDueDateFromEventPage(actualEventPageURL, idOfEvent){
-  makeXHRreq(actualEventPageURL, "GET", "text")
-  .then(function(actualEventPage){
-    let $event = $.parseHTML(actualEventPage.responseText);
-    let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
-    console.log(eventDate);
-    let convertDateToUniversal = (new Date(eventDate)).toJSON();
-    let jsonDate = ICAL.Time.fromDateTimeString(convertDateToUniversal).toJSON();
-    EVENT_NEED_FIX[idOfEvent].newDate = jsonDate;
-    console.log(jsonDate);
-  })
-  .catch(function(error){
-    console.log(error);
+  return new Promise(function(resolve, reject){
+    makeXHRreq(actualEventPageURL, "GET", "text")
+    .then(function(actualEventPage){
+      let $event = $.parseHTML(actualEventPage.responseText);
+      let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
+      // console.log(eventDate);
+      if(eventDate){
+        let convertDateToUniversal = (new Date(eventDate)).toJSON();
+        let jsonDate = ICAL.Time.fromDateTimeString(convertDateToUniversal).toJSON();
+        // console.log(idOfEvent);
+        resolve([jsonDate, idOfEvent]);
+      }
+      else{
+        reject("Error getting due date");
+      }
+      // EVENT_NEED_FIX[idOfEvent].newDate = jsonDate;
+    })
+    .catch(function(error){
+      console.log(error);
+    });
   });
+}
+
+/**
+ * @function loadScript
+ * @param {string} source
+ */
+function loadScript(source) {
+  let script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.async = true;
+  script.defer = true;
+  script.src = `${source}`;
+  let head = document.getElementsByTagName("head")[0];
+  head.appendChild(script);
 }
 
 checkUserLogin();
