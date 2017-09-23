@@ -182,14 +182,6 @@ function parseCalender(calender){
       }
     }
 
-    // if(EVENTS[eventToAdd.uid]){
-    //   eventToAdd.done = EVENTS[eventToAdd.uid].done;
-    // }
-    // else{
-    //   eventToAdd.done = false;
-    // }
-    // // Add event to main EVENTS which holds all events.
-    // EVENTS[eventToAdd.uid] = eventToAdd;
     if(EVENTS[eventToAdd.endDateJSON.year]){
       if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
         if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
@@ -280,6 +272,7 @@ function scrapeEventTime(){
           }
         });
         console.log(EVENT_NEED_FIX);
+        fixDropBoxEvents();
       })
       .catch(function(error){
         console.log("Error: ", error);
@@ -361,6 +354,54 @@ function loadScript(source) {
   script.src = `${source}`;
   let head = document.getElementsByTagName("head")[0];
   head.appendChild(script);
+}
+
+function fixDropBoxEvents(){
+  for(let uid in EVENT_NEED_FIX){
+    let brokenEvent = EVENT_NEED_FIX[uid];
+    if(brokenEvent.newDate){
+      let oldDate = brokenEvent.oldDate;
+      let newDate = brokenEvent.newDate;
+      let oldEvent = EVENTS[oldDate.year][oldDate.month][oldDate.day][uid];
+      delete EVENTS[oldDate.year][oldDate.month][oldDate.day][uid];
+      if(Object.keys(EVENTS[oldDate.year][oldDate.month][oldDate.day]).length === 0){
+        delete EVENTS[oldDate.year][oldDate.month][oldDate.day];
+        if(Object.keys(EVENTS[oldDate.year][oldDate.month]).length === 0){
+          delete EVENTS[oldDate.year][oldDate.month];
+        }
+      }
+      if(EVENTS[newDate.year]){
+        if(EVENTS[newDate.year][newDate.month]){
+          if(EVENTS[newDate.year][newDate.month][newDate.day]){
+            EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+          }
+          else{
+            EVENTS[newDate.year][newDate.month][newDate.day] = {};
+            EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+          }
+        }
+        else{
+          EVENTS[newDate.year][newDate.month] = {};
+          EVENTS[newDate.year][newDate.month][newDate.day] = {};
+          EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+        }
+      }
+      else{
+        EVENTS[newDate.year] = {};
+        EVENTS[newDate.year][newDate.month] = {};
+        EVENTS[newDate.year][newDate.month][newDate.day] = {};
+        EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+      }
+    }
+  }
+  chrome.storage.local.set({EVENTS: EVENTS}, function(){
+    console.log("Events saved to storage");
+  });
+
+  // inform popup that events are now laoded
+  chrome.runtime.sendMessage({request: "EVENTS LOADED"}, function(response){
+    console.log(response);
+  });
 }
 
 checkUserLogin();
