@@ -1,8 +1,8 @@
 {
-  "name": "Moodle",
-  "version": "0.0.8",
+  "name": "Moodle Plattsburgh",
+  "version": "0.0.9",
   "manifest_version": 2,
-  "description": "Moodle",
+  "description": "Moodle for SUNY Plattsburgh students",
   "homepage_url": "http://www.jayantarora.com",
   "icons": {
     "16": "icons/icon.png",
