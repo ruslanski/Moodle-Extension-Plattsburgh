@@ -168,13 +168,35 @@ function parseCalender(calender){
     eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
     eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
     eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
+    console.log(vevents[i].getFirstPropertyValue("dtend"));
     eventToAdd.endDateJSON = vevents[i].getFirstPropertyValue("dtend").toJSON();
+    let dateYear = eventToAdd.endDate.getFullYear();
+    let dateMonth = eventToAdd.endDate.getMonth()+1;
+    let dateDate = eventToAdd.endDate.getDate();
+    let dateHour = eventToAdd.endDate.getHours();
+    let dateMins = eventToAdd.endDate.getMinutes();
+    let dateSecs = eventToAdd.endDate.getMinutes();
+    eventToAdd.endDateJSON.year = dateYear;
+    eventToAdd.endDateJSON.month = dateMonth;
+    eventToAdd.endDateJSON.day = dateDate;
+    eventToAdd.endDateJSON.hour = dateHour;
+    eventToAdd.endDateJSON.minute = dateMins;
+    eventToAdd.endDateJSON.second = dateSecs;
     eventToAdd.endDateUnix = vevents[i].getFirstPropertyValue("dtend").toUnixTime();
 
     // Test is the event has a valid due date.
     if(eventToAdd.endDateJSON.timezone === "floating" || eventToAdd.endDateJSON.isDate === true){
+      // if(EVENTS[eventToAdd.uid]){
+      //   if(EVENTS[eventToAdd.uid][0] !=== eventToAdd.endDateJSON EVENTS[eventToAdd.uid][1] EVENTS[eventToAdd.uid][2])
+      // }
       if(EVENT_NEED_FIX[eventToAdd.uid]){
+        if(!EVENT_NEED_FIX[eventToAdd.uid].newDate){
           EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
+        }
+        else{
+          EVENT_NEED_FIX[eventToAdd.uid].oldDate = EVENT_NEED_FIX[eventToAdd.uid].newDate;
+          // EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
+        }
       }
       else{
         EVENT_NEED_FIX[eventToAdd.uid] = {};
@@ -182,15 +204,28 @@ function parseCalender(calender){
       }
     }
 
+    if(EVENTS[eventToAdd.uid]){
+      let oldEventloc = EVENTS[eventToAdd.uid];
+      console.log(eventToAdd.uid, EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid]);
+      eventToAdd.done = EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid].done;
+      EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid] = eventToAdd;
+      continue;
+    }
+    else{
+      eventToAdd.done = false;
+    }
+
+    EVENTS[eventToAdd.uid] = [eventToAdd.endDateJSON.year, eventToAdd.endDateJSON.month, eventToAdd.endDateJSON.day];
+
     if(EVENTS[eventToAdd.endDateJSON.year]){
       if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
         if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
-          if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid]){
-            eventToAdd.done = EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid].done;
-          }
-          else{
-            eventToAdd.done = false;
-          }
+          // if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid]){
+          //   eventToAdd.done = EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid].done;
+          // }
+          // else{
+          //   eventToAdd.done = false;
+          // }
           EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
         else{
@@ -326,8 +361,14 @@ function getDueDateFromEventPage(actualEventPageURL, idOfEvent){
       let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
       // console.log(eventDate);
       if(eventDate){
-        let convertDateToUniversal = (new Date(eventDate)).toJSON();
-        let jsonDate = ICAL.Time.fromDateTimeString(convertDateToUniversal).toJSON();
+        let tempDateObject = new Date(eventDate);
+        let dateYear = tempDateObject.getFullYear();
+        let dateMonth = tempDateObject.getMonth()+1;
+        let dateDate = tempDateObject.getDate();
+        let dateHour = tempDateObject.getHours();
+        let dateMins = tempDateObject.getMinutes();
+        let dateSecs = tempDateObject.getMinutes();
+        let jsonDate = new ICAL.Time({year: dateYear, month: dateMonth, day: dateDate, hour: dateHour, minute: dateMins, second: dateSecs, isDate: false}).toJSON();
         // console.log(idOfEvent);
         resolve([jsonDate, idOfEvent]);
       }
@@ -364,6 +405,7 @@ function fixDropBoxEvents(){
       let newDate = brokenEvent.newDate;
       let oldEvent = EVENTS[oldDate.year][oldDate.month][oldDate.day][uid];
       delete EVENTS[oldDate.year][oldDate.month][oldDate.day][uid];
+
       if(Object.keys(EVENTS[oldDate.year][oldDate.month][oldDate.day]).length === 0){
         delete EVENTS[oldDate.year][oldDate.month][oldDate.day];
         if(Object.keys(EVENTS[oldDate.year][oldDate.month]).length === 0){
@@ -374,16 +416,19 @@ function fixDropBoxEvents(){
         if(EVENTS[newDate.year][newDate.month]){
           if(EVENTS[newDate.year][newDate.month][newDate.day]){
             EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+            EVENTS[uid] = [newDate.year, newDate.month, newDate.day];
           }
           else{
             EVENTS[newDate.year][newDate.month][newDate.day] = {};
             EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+            EVENTS[uid] = [newDate.year, newDate.month, newDate.day];
           }
         }
         else{
           EVENTS[newDate.year][newDate.month] = {};
           EVENTS[newDate.year][newDate.month][newDate.day] = {};
           EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+          EVENTS[uid] = [newDate.year, newDate.month, newDate.day];
         }
       }
       else{
@@ -391,6 +436,7 @@ function fixDropBoxEvents(){
         EVENTS[newDate.year][newDate.month] = {};
         EVENTS[newDate.year][newDate.month][newDate.day] = {};
         EVENTS[newDate.year][newDate.month][newDate.day][uid] = oldEvent;
+        EVENTS[uid] = [newDate.year, newDate.month, newDate.day];
       }
     }
   }
