@@ -171,7 +171,9 @@ function getPageContainingURL(){
   let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
   makeXHRreq(url=url, method="GET", responseType="text")
   .then(function(page){
-    getCalenderURL(page.response);
+    if(page.responseURL.search("moodle.plattsburgh.edu") > -1){
+      getCalenderURL(page.response);
+    }
   })
   .catch(function(error){
     console.log(error);
