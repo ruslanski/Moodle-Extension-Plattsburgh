@@ -7,6 +7,7 @@
 
 // add badge to denote testing
 chrome.browserAction.setBadgeText({text:"a"});
+var LOGGED_IN = 0;
 
 // Global Variables
 // check chrome local storage is events already exit if not set it to null.
@@ -36,7 +37,14 @@ chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
     console.log(request);
     if(request.request === "EVENTS"){
-      sendResponse({EVENTS: EVENTS});
+      if(Object.keys(EVENTS).length > 0){
+        sendResponse({EVENTS: EVENTS});
+      }
+      else if(LOGGED_IN === 0){
+        makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="You are not logged in to Moodle! Click more to login now!", [{
+          title: "Login Now!"
+        }]);
+      }
     }
     if(request.request === "MARK DONE"){
       let id = request.id;
@@ -98,14 +106,15 @@ function checkUserLogin(){
     console.log(mainPage);
     if(mainPage.responseURL.search("moodle.plattsburgh.edu/my") > -1){
       console.log("User is logged in!");
+      LOGGED_IN = 1;
       getPageContainingURL();
     }
     else if(mainPage.responseURL.search("cas.plattsburgh") > -1){
       console.log("Send user notification to log in");
       // if the user is not logged in send a notification.
       // TODO: Open a new tab to ask the user to log in to cas.
-      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.", [{
-            title: "Go to Login Page"
+      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="You are not logged in to Moodle! Click more to login now!", [{
+            title: "Login Now!"
         }]);
     }
     else{
@@ -452,5 +461,33 @@ function fixDropBoxEvents(){
     console.log(response);
   });
 }
+
+chrome.notifications.onButtonClicked.addListener(function(notificationID, buttonIndex){
+  if(buttonIndex === 0){
+    console.log("Open popup to login!");
+    // open a new popup with moodle page to login
+    chrome.windows.create({'url': 'https://moodle.plattsburgh.edu/login/index.php', 'type': 'popup', 'focused': true}, function(window) {
+      // get current tab's url
+      chrome.tabs.get(window.tabs[0].id, function(tabOject){
+        console.log(tabOject.url);
+        // check on every update what is the url of the current tab.
+        chrome.tabs.onUpdated.addListener(function tabListener(updatedTabId, changeInfo, tabitself){
+          console.log(tabitself);
+          if(tabitself.status === "complete"){
+            if(tabitself.url.search("moodle.plattsburgh.edu/my") > -1 || tabitself.url.search("mahara.plattsburgh.edu") > -1){
+              console.log(window);
+              chrome.windows.remove(window.id);
+              //TODO: remove onUpdatedlistener
+              //chrome.tabs.onUpdated.removeListener();
+              LOGGED_IN = 1;
+              checkUserLogin();
+              chrome.tabs.onUpdated.removeListener(tabListener);
+            }
+          }
+        });
+      });
+    });
+  }
+});
 
 // checkUserLogin();
