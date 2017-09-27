@@ -7,6 +7,8 @@
 
 // add badge to denote testing
 chrome.browserAction.setBadgeText({text:"a"});
+
+// Set user logged in as 0 which means false. Used for refresh and when notificatins need to be displayed.
 var LOGGED_IN = 0;
 
 // Global Variables
@@ -464,7 +466,9 @@ function fixDropBoxEvents(){
   });
 }
 
+// Add listener when login option is selected from notification.
 chrome.notifications.onButtonClicked.addListener(function(notificationID, buttonIndex){
+  // This is the index of the button clicked.
   if(buttonIndex === 0){
     console.log("Open popup to login!");
     // open a new popup with moodle page to login
@@ -475,14 +479,15 @@ chrome.notifications.onButtonClicked.addListener(function(notificationID, button
         // check on every update what is the url of the current tab.
         chrome.tabs.onUpdated.addListener(function tabListener(updatedTabId, changeInfo, tabitself){
           console.log(tabitself);
+          // Need to check only for complete status else there is a lot of waste information
           if(tabitself.status === "complete"){
             if(tabitself.url.search("moodle.plattsburgh.edu/my") > -1 || tabitself.url.search("mahara.plattsburgh.edu") > -1){
               console.log(window);
               chrome.windows.remove(window.id);
-              //TODO: remove onUpdatedlistener
               //chrome.tabs.onUpdated.removeListener();
               LOGGED_IN = 1;
               checkUserLogin();
+              // Remove listener otherwise this shows notifications for every page load in every tab
               chrome.tabs.onUpdated.removeListener(tabListener);
             }
           }
