@@ -1,6 +1,6 @@
 {
   "name": "Moodle Plattsburgh",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "manifest_version": 2,
   "description": "Moodle for SUNY Plattsburgh students",
   "homepage_url": "http://www.jayantarora.com",
@@ -28,7 +28,11 @@
     "cookies",
     "notifications",
     "storage",
-    "alarms"
+    "alarms",
+    "tabs"
+    // "activeTab",
+    // "http://*/",
+    // "https://*/"
   ],
   "content_scripts": [
     {
