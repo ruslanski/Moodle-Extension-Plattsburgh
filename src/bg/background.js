@@ -12,13 +12,24 @@ chrome.browserAction.setBadgeText({text:"a"});
 // check chrome local storage is events already exit if not set it to null.
 chrome.storage.local.get(["EVENTS"], function(events){
   (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
+  chrome.storage.local.get(["EVENTS_DONE"], function(events){
+    (events.EVENTS_DONE !== undefined) ? (EVENTS_DONE = events.EVENTS_DONE) : EVENTS_DONE = {};
+    if(Object.keys(EVENTS).length !== 0 && Object.keys(EVENTS_DONE).length === 0){
+      for(let month in EVENTS[2017]){
+        for(let day in EVENTS[2017][month]){
+          for(let dayEvent in EVENTS[2017][month][day]){
+            EVENTS_DONE[dayEvent.uid] = dayEvent.done;
+          }
+        }
+      }
+    }
+    checkUserLogin();
+  });
 });
 
-var EVENT_NEED_FIX = {};
 
-// chrome.storage.local.get(["EVENTS_TEST"], function(events){
-//   (events.EVENTS_TEST !== undefined) ? (EVENTS_TEST = events.EVENTS_TEST) : EVENTS_TEST = {};
-// });
+
+var EVENT_NEED_FIX = {};
 
 // Add listener to listen for requests to get events
 chrome.runtime.onMessage.addListener(
@@ -33,7 +44,8 @@ chrome.runtime.onMessage.addListener(
       let month = request.month;
       let day = request.day;
       EVENTS[year][month][day][id].done = true;
-      chrome.storage.local.set({EVENTS: EVENTS}, function(){
+      EVENTS_DONE[request.id] = true;
+      chrome.storage.local.set({EVENTS_DONE: EVENTS_DONE, EVENTS: EVENTS}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as done");
       });
@@ -44,7 +56,8 @@ chrome.runtime.onMessage.addListener(
       let month = request.month;
       let day = request.day;
       EVENTS[year][month][day][id].done = false;
-      chrome.storage.local.set({EVENTS: EVENTS}, function(){
+      EVENTS_DONE[request.id] = false;
+      chrome.storage.local.set({EVENTS: EVENTS, EVENTS_DONE: EVENTS_DONE}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as undone");
       });
@@ -91,7 +104,9 @@ function checkUserLogin(){
       console.log("Send user notification to log in");
       // if the user is not logged in send a notification.
       // TODO: Open a new tab to ask the user to log in to cas.
-      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.");
+      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.", [{
+            title: "Go to Login Page"
+        }]);
     }
     else{
       console.log("Some error occured!");
@@ -108,13 +123,15 @@ function checkUserLogin(){
  * @param  {string} iconURL [url to the icon for notification]
  * @param  {string} title   [title to display on the notification]
  * @param  {string} message [message to be sent to the notification]
+ * @param {object} buttons buttons to be displayed on the notification
  */
-function makeChromeNotification(type, iconURL, title, message){
+function makeChromeNotification(type, iconURL, title, message, buttons=[]){
   chrome.notifications.create("1", {
     type: type,
     iconUrl: iconURL,
     title: title,
     message: message,
+    buttons: buttons,
     requireInteraction: true
   }, function(){});
 }
@@ -157,6 +174,7 @@ function getPageContainingURL(){
  * @param  {string} calender Calender.ics file in string format
  */
 function parseCalender(calender){
+  let EVENTS_TEMP = {};
   let jcalData = ICAL.parse(calender);
   let vcalendar = new ICAL.Component(jcalData);
   let vevents = vcalendar.getAllSubcomponents('vevent');
@@ -186,17 +204,9 @@ function parseCalender(calender){
 
     // Test is the event has a valid due date.
     if(eventToAdd.endDateJSON.timezone === "floating" || eventToAdd.endDateJSON.isDate === true){
-      // if(EVENTS[eventToAdd.uid]){
-      //   if(EVENTS[eventToAdd.uid][0] !=== eventToAdd.endDateJSON EVENTS[eventToAdd.uid][1] EVENTS[eventToAdd.uid][2])
-      // }
       if(EVENT_NEED_FIX[eventToAdd.uid]){
-        if(!EVENT_NEED_FIX[eventToAdd.uid].newDate){
-          EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
-        }
-        else{
-          EVENT_NEED_FIX[eventToAdd.uid].oldDate = EVENT_NEED_FIX[eventToAdd.uid].newDate;
-          // EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
-        }
+        EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
+        delete EVENT_NEED_FIX[eventToAdd.uid].newDate;
       }
       else{
         EVENT_NEED_FIX[eventToAdd.uid] = {};
@@ -204,55 +214,48 @@ function parseCalender(calender){
       }
     }
 
-    if(EVENTS[eventToAdd.uid]){
-      let oldEventloc = EVENTS[eventToAdd.uid];
-      console.log(eventToAdd.uid, EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid]);
-      eventToAdd.done = EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid].done;
-      EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid] = eventToAdd;
-      continue;
+    if(EVENTS_DONE[eventToAdd.uid]){
+      eventToAdd.done = EVENTS_DONE[eventToAdd.uid];
     }
     else{
       eventToAdd.done = false;
+      EVENTS_DONE[eventToAdd.uid] = false;
     }
 
-    EVENTS[eventToAdd.uid] = [eventToAdd.endDateJSON.year, eventToAdd.endDateJSON.month, eventToAdd.endDateJSON.day];
+    EVENTS_TEMP[eventToAdd.uid] = [eventToAdd.endDateJSON.year, eventToAdd.endDateJSON.month, eventToAdd.endDateJSON.day];
 
-    if(EVENTS[eventToAdd.endDateJSON.year]){
-      if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
-        if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
-          // if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid]){
-          //   eventToAdd.done = EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid].done;
-          // }
-          // else{
-          //   eventToAdd.done = false;
-          // }
-          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+    if(EVENTS_TEMP[eventToAdd.endDateJSON.year]){
+      if(EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
+        if(EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
+          EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
         else{
-          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+          EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+          EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
       }
       else{
-        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
-        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+        EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
+        EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+        EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
       }
     }
     else{
-      EVENTS[eventToAdd.endDateJSON.year] = {};
-      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
-      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+      EVENTS_TEMP[eventToAdd.endDateJSON.year] = {};
+      EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
+      EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+      EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
     }
-    // [eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
   }
 
   // call function to fix dates for those who have faulty dates
-  scrapeEventTime();
-
-  chrome.storage.local.set({EVENTS: EVENTS}, function(){
+  chrome.storage.local.set({EVENTS: EVENTS_TEMP}, function(){
     console.log("Events saved to storage");
+    // Set events in current instance
+    EVENTS = EVENTS_TEMP;
+    if(Object.keys(EVENT_NEED_FIX).length > 0){
+      scrapeEventTime();
+    }
   });
 
   // inform popup that events are now laoded
@@ -450,4 +453,4 @@ function fixDropBoxEvents(){
   });
 }
 
-checkUserLogin();
+// checkUserLogin();
