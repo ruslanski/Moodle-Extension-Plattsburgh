@@ -123,8 +123,10 @@ function addEventsToPopup(){
     let today_date = new Date();
     let today_date_data = `${today_date.getMonth()+1}/${today_date.getDate()}/${today_date.getFullYear()}`;
     let $currentEvent = $(`[data-date="${today_date_data}"`);
-    $(window).scrollTop($currentEvent.offset().top - 50);
-    $currentEvent.addClass("highlight_on_load");
+    if($currentEvent.length !== 0){
+      $(window).scrollTop($currentEvent.offset().top - 10);
+      $currentEvent.addClass("highlight_on_load");
+    }
   }, 200);
 }
 
