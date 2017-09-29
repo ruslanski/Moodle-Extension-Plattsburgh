@@ -152,6 +152,11 @@ function makeChromeNotification(type, iconURL, title, message, buttons=[]){
  * @param  {string} html [HTML of the page in string format which contains calender]
  * @return {[type]}      [description]
  */
+// TODO: This function has some stability issues. It breaks sometimes at trying to
+// get href for calender url tag. Did check it on console for the actual page but
+// got no error. Probably something to do with how xhr returns results.
+// Mostly happens when user clicks refresh while the first promise is still fetching
+// data or xhr is still in process
 function getCalenderURL(html){
   let jqueryHTML = $.parseHTML(html);
   let urlForCalender = $(jqueryHTML).find("#region-main > div > div > div > div.bottom > a")[0].href;
@@ -162,7 +167,6 @@ function getCalenderURL(html){
   .catch(function(error){
     console.log(error);
   });
-  console.log(urlForCalender);
 }
 
 
@@ -199,7 +203,7 @@ function parseCalender(calender){
     eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
     eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
     eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
-    console.log(vevents[i].getFirstPropertyValue("dtend"));
+    //console.log(vevents[i].getFirstPropertyValue("dtend"));
     eventToAdd.endDateJSON = vevents[i].getFirstPropertyValue("dtend").toJSON();
     let dateYear = eventToAdd.endDate.getFullYear();
     let dateMonth = eventToAdd.endDate.getMonth()+1;
@@ -303,19 +307,19 @@ function scrapeEventTime(){
         return scrapeListOfEventsPage(linkToPageWithEvents, uid);
       }
       else{
+        // Have to return undefined for now as there is no other way to get past this place.
         return undefined;
       }
     });
 
     Q.allSettled(listofpromisesForEventURL)
     .then(function(eventUrlWithID){
-      // console.log(eventUrlWithID);
-      let scraptedDates =  eventUrlWithID.map(function(idAndUrl){
+      let scraptedDatesURL =  eventUrlWithID.map(function(idAndUrl){
         if(idAndUrl.state === "fulfilled" && idAndUrl.value !== undefined){
           return getDueDateFromEventPage(idAndUrl.value[1], idAndUrl.value[0]);
         }
       });
-      Q.allSettled(scraptedDates)
+      Q.allSettled(scraptedDatesURL)
       .then(function(jsonDate){
         jsonDate.forEach(function(jsDate){
           if(jsDate.state === "fulfilled" && jsDate.value !== undefined){
@@ -374,9 +378,11 @@ function getDueDateFromEventPage(actualEventPageURL, idOfEvent){
     makeXHRreq(actualEventPageURL, "GET", "text")
     .then(function(actualEventPage){
       let $event = $.parseHTML(actualEventPage.responseText);
-      let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
-      // console.log(eventDate);
-      if(eventDate){
+      console.log($event);
+      let eventDateChildren = $($event).find('tr:has(td:contains("Due date"))').children();
+      console.log(eventDateChildren);
+      if(eventDateChildren.length > 0){
+        let eventDate = $(eventDateChildren[1]).text();
         let tempDateObject = new Date(eventDate);
         let dateYear = tempDateObject.getFullYear();
         let dateMonth = tempDateObject.getMonth()+1;
@@ -468,11 +474,15 @@ function fixDropBoxEvents(){
 
 // Add listener when login option is selected from notification.
 chrome.notifications.onButtonClicked.addListener(function(notificationID, buttonIndex){
+  // close the notification as user clicks it.
+  chrome.notifications.clear(notificationID, function(wasCleared){
+    console.log("Notification: ", notificationID, " closed.");
+  });
   // This is the index of the button clicked.
   if(buttonIndex === 0){
     console.log("Open popup to login!");
     // open a new popup with moodle page to login
-    chrome.windows.create({'url': 'https://moodle.plattsburgh.edu/login/index.php', 'type': 'popup', 'focused': true}, function(window) {
+    chrome.windows.create({'url': 'https://cas.plattsburgh.edu/login', 'type': 'popup', 'focused': true}, function(window) {
       // get current tab's url
       chrome.tabs.get(window.tabs[0].id, function(tabOject){
         console.log(tabOject.url);
@@ -481,7 +491,7 @@ chrome.notifications.onButtonClicked.addListener(function(notificationID, button
           console.log(tabitself);
           // Need to check only for complete status else there is a lot of waste information
           if(tabitself.status === "complete"){
-            if(tabitself.url.search("moodle.plattsburgh.edu/my") > -1 || tabitself.url.search("mahara.plattsburgh.edu") > -1){
+            if(tabitself.url.search("cas.plattsburgh.edu/sessions") > -1 || tabitself.url.search("mahara.plattsburgh.edu") > -1){
               console.log(window);
               chrome.windows.remove(window.id);
               //chrome.tabs.onUpdated.removeListener();

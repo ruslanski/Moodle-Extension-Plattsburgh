@@ -30,9 +30,6 @@
     "storage",
     "alarms",
     "tabs"
-    // "activeTab",
-    // "http://*/",
-    // "https://*/"
   ],
   "content_scripts": [
     {
