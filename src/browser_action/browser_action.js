@@ -47,6 +47,7 @@ function addEventsToPopup(){
       if(document.querySelector(`[data-date="${fullDate}"]`) == null){
         let divWrap = document.createElement('div');
         let h_1 = document.createElement("h4");
+        h_1.style.fontWeight = "bold";
         let fullDateText = document.createTextNode(`${WEEKDAY[new Date(fullDate).getDay()]} ${MONTHS[month]} ${day}`);
         h_1.appendChild(fullDateText);
         h_1.style.textAlign = "center";
@@ -122,8 +123,10 @@ function addEventsToPopup(){
     let today_date = new Date();
     let today_date_data = `${today_date.getMonth()+1}/${today_date.getDate()}/${today_date.getFullYear()}`;
     let $currentEvent = $(`[data-date="${today_date_data}"`);
-    $(window).scrollTop($currentEvent.offset().top - 50);
-    $currentEvent.addClass("highlight_on_load");
+    if($currentEvent.length !== 0){
+      $(window).scrollTop($currentEvent.offset().top - 10);
+      $currentEvent.addClass("highlight_on_load");
+    }
   }, 200);
 }
 
