@@ -47,6 +47,7 @@ function addEventsToPopup(){
       if(document.querySelector(`[data-date="${fullDate}"]`) == null){
         let divWrap = document.createElement('div');
         let h_1 = document.createElement("h4");
+        h_1.style.fontWeight = "bold";
         let fullDateText = document.createTextNode(`${WEEKDAY[new Date(fullDate).getDay()]} ${MONTHS[month]} ${day}`);
         h_1.appendChild(fullDateText);
         h_1.style.textAlign = "center";

@@ -24,7 +24,7 @@ color:#454545;
 h1 .fa-check{
 font-size:30px;
 margin-right:10px;
-color:#0eb0b7;
+color: #ff0000;/*#0eb0b7;*/
 }
 #todo-list{
 width:500px;
@@ -153,14 +153,14 @@ width:100%;
 }
 :checked + .todo:after{
 /*box-shadow*/
--webkit-box-shadow:inset 0 0 0 2px #0eb0b7;
-   -moz-box-shadow:inset 0 0 0 2px #0eb0b7;
-        box-shadow:inset 0 0 0 2px #0eb0b7;
+-webkit-box-shadow:inset 0 0 0 2px #ff0000/*#0eb0b7*/;
+   -moz-box-shadow:inset 0 0 0 2px #ff0000/*#0eb0b7*/;
+        box-shadow:inset 0 0 0 2px #ff0000/*#0eb0b7*/;
 }
 :checked + .todo .fa-check{
 font-size:20px;
 line-height:35px;
-color:#0eb0b7;
+color: #ff0000;/*#0eb0b7;*/
 }
 /* Delete Items */
 
@@ -228,5 +228,6 @@ width:100%;
 }
 
 .highlight_on_load {
-    border: 2px solid #0eb0b7;
+    border: 2px solid #ff0000;/*#0eb0b7;*/
+    background-color: #ffedee;
 }
