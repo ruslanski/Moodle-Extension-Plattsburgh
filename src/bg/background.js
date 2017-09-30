@@ -103,24 +103,27 @@ function makeXHRreq(url, method, responseType){
  * @function checkUserLogin [Check if the user has a valid login to moodle available.]
  */
 function checkUserLogin(){
-  makeXHRreq("https://moodle.plattsburgh.edu/login/index.php", "GET", "text")
+  let url = "http://cas.plattsburgh.edu";
+  // "https://moodle.plattsburgh.edu/login/index.php"
+  makeXHRreq(url, "GET", "text")
   .then(function(mainPage){
     console.log(mainPage);
-    if(mainPage.responseURL.search("moodle.plattsburgh.edu/my") > -1){
+    if(mainPage.responseURL.search("cas.plattsburgh.edu/sessions") > -1){
       console.log("User is logged in!");
       LOGGED_IN = 1;
       getPageContainingURL();
     }
-    else if(mainPage.responseURL.search("cas.plattsburgh") > -1){
+    else if(mainPage.responseURL.search("cas.plattsburgh.edu/login") > -1){
       console.log("Send user notification to log in");
       // if the user is not logged in send a notification.
-      // TODO: Open a new tab to ask the user to log in to cas.
       makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="You are not logged in to Moodle! Click more to login now!", [{
             title: "Login Now!"
         }]);
     }
     else{
       console.log("Some error occured!");
+      console.log("LOGIN TRACE: ");
+      console.log(mainPage);
     }
   })
   .catch(function(error){
@@ -148,9 +151,8 @@ function makeChromeNotification(type, iconURL, title, message, buttons=[]){
 }
 
 /**
- * @function getCalenderURL [Get url of the calender]
- * @param  {string} html [HTML of the page in string format which contains calender]
- * @return {[type]}      [description]
+ * @function getCalenderURL Get url of the calender
+ * @param {string} html HTML of the page in string format which contains calender
  */
 // TODO: This function has some stability issues. It breaks sometimes at trying to
 // get href for calender url tag. Did check it on console for the actual page but
@@ -158,6 +160,8 @@ function makeChromeNotification(type, iconURL, title, message, buttons=[]){
 // Mostly happens when user clicks refresh while the first promise is still fetching
 // data or xhr is still in process
 function getCalenderURL(html){
+  // to fix that issue of users not able to get pass through may be I need to go to
+  // moodle.plattsburgh.edu/my
   let jqueryHTML = $.parseHTML(html);
   let urlForCalender = $(jqueryHTML).find("#region-main > div > div > div > div.bottom > a")[0].href;
   makeXHRreq(url=urlForCalender, method="GET", responseType="text")
@@ -165,7 +169,7 @@ function getCalenderURL(html){
     parseCalender(calender.responseText);
   })
   .catch(function(error){
-    console.log(error);
+    console.log("getCalenderURL ERROR: ", error);
   });
 }
 
@@ -174,15 +178,34 @@ function getCalenderURL(html){
  * @function getPageContainingURL Get the page in html which contains the URL for calender
  */
 function getPageContainingURL(){
-  let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
-  makeXHRreq(url=url, method="GET", responseType="text")
-  .then(function(page){
-    if(page.responseURL.search("moodle.plattsburgh.edu") > -1){
-      getCalenderURL(page.response);
+  // need to login to moodle
+  let urlMoodleMain = "https://moodle.plattsburgh.edu/my";
+  makeXHRreq(url=urlMoodleMain, method="GET", responseType="text")
+  .then(function(mainMoodlePage){
+    if(mainMoodlePage.responseURL.search("moodle.plattsburgh.edu/my") > -1 || mainMoodlePage.responseURL.search("mahara.plattsburgh.edu") > -1){
+      let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
+      makeXHRreq(url=url, method="GET", responseType="text")
+      .then(function(page){
+        if(page.responseURL.search("moodle.plattsburgh.edu/calendar") > -1){
+          getCalenderURL(page.response);
+        }
+        else{
+          // recall this function in case of some unknown error which should possibly be
+          // fixed if we call again
+          getPageContainingURL();
+        }
+      })
+      .catch(function(error){
+        console.log("getPageContainingURL: Cannot get calendar: ", error);
+      });
+    }
+    else if(mainMoodlePage.responseURL.search("cas.plattsburgh.edu") > -1){
+      // user is not logged in "Probably".
+      checkUserLogin();
     }
   })
   .catch(function(error){
-    console.log(error);
+    console.log("");
   });
 }
 
