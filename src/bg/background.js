@@ -327,6 +327,7 @@ function scrapeEventTime(){
       // when they are not event needed
       if(tempURL){
         let linkToPageWithEvents = tempURL[0].replace(/&amp;/g, "&");
+        console.info("linkToPageWithEvents log: ", [uid, linkToPageWithEvents]);
         return scrapeListOfEventsPage(linkToPageWithEvents, uid);
       }
       else{
@@ -344,12 +345,13 @@ function scrapeEventTime(){
       });
       Q.allSettled(scraptedDatesURL)
       .then(function(jsonDate){
+        console.log(jsonDate);
         jsonDate.forEach(function(jsDate){
           if(jsDate.state === "fulfilled" && jsDate.value !== undefined){
             EVENT_NEED_FIX[jsDate.value[1]].newDate = jsDate.value[0];
           }
         });
-        console.log(EVENT_NEED_FIX);
+        console.warn("About to fix events", EVENT_NEED_FIX);
         fixDropBoxEvents();
       })
       .catch(function(error){
@@ -376,16 +378,18 @@ function scrapeListOfEventsPage(linkToPageWithEvents, idOfEvent){
       makeXHRreq(linkToPageWithEvents, "GET", "text")
       .then(function(pageWithEvent){
         let $pageWithEvent = $.parseHTML(pageWithEvent.responseText);
-        let eventURL = $($pageWithEvent).find(`#event_${idOfEvent} > div > div.box.card-header.clearfix > h3 > a`)[0].href;
-        if(eventURL){
-          resolve([idOfEvent, eventURL]);
+        let eventURLlen = $($pageWithEvent).find(`#event_${idOfEvent} > div > div.box.card-header.clearfix > h3 > a`);
+        if(eventURLlen.length > 0){
+          console.info("scrape event url log: ", [idOfEvent, eventURLlen]);
+          resolve([idOfEvent, eventURLlen[0].href]);
         }
         else{
+          console.warn("WARN-ERROR scrape event !url log: ", [idOfEvent, eventURLlen]);
           reject("Event Url not found");
         }
       })
       .catch(function(error){
-        console.log(error);
+        console.warn("ERROR: scrapeListofEvents Trace: ", [{"idOfEvent": idOfEvent}, error]);
       });
     // getDueDateFromEventPage(eventURL, idOfEvent);
   });
