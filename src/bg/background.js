@@ -8,24 +8,45 @@
 // add badge to denote testing
 chrome.browserAction.setBadgeText({text:"a"});
 
+// Set user logged in as 0 which means false. Used for refresh and when notificatins need to be displayed.
+var LOGGED_IN = 0;
+
 // Global Variables
 // check chrome local storage is events already exit if not set it to null.
 chrome.storage.local.get(["EVENTS"], function(events){
   (events.EVENTS !== undefined) ? (EVENTS = events.EVENTS) : EVENTS = {};
+  chrome.storage.local.get(["EVENTS_DONE"], function(events){
+    (events.EVENTS_DONE !== undefined) ? (EVENTS_DONE = events.EVENTS_DONE) : EVENTS_DONE = {};
+    if(Object.keys(EVENTS).length !== 0 && Object.keys(EVENTS_DONE).length === 0){
+      for(let month in EVENTS[2017]){
+        for(let day in EVENTS[2017][month]){
+          for(let dayEvent in EVENTS[2017][month][day]){
+            EVENTS_DONE[dayEvent.uid] = dayEvent.done;
+          }
+        }
+      }
+    }
+    checkUserLogin();
+  });
 });
 
-var EVENT_NEED_FIX = {};
 
-// chrome.storage.local.get(["EVENTS_TEST"], function(events){
-//   (events.EVENTS_TEST !== undefined) ? (EVENTS_TEST = events.EVENTS_TEST) : EVENTS_TEST = {};
-// });
+
+var EVENT_NEED_FIX = {};
 
 // Add listener to listen for requests to get events
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
     console.log(request);
     if(request.request === "EVENTS"){
-      sendResponse({EVENTS: EVENTS});
+      if(Object.keys(EVENTS).length > 0){
+        sendResponse({EVENTS: EVENTS});
+      }
+      else if(LOGGED_IN === 0){
+        makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="You are not logged in to Moodle! Click more to login now!", [{
+          title: "Login Now!"
+        }]);
+      }
     }
     if(request.request === "MARK DONE"){
       let id = request.id;
@@ -33,7 +54,8 @@ chrome.runtime.onMessage.addListener(
       let month = request.month;
       let day = request.day;
       EVENTS[year][month][day][id].done = true;
-      chrome.storage.local.set({EVENTS: EVENTS}, function(){
+      EVENTS_DONE[request.id] = true;
+      chrome.storage.local.set({EVENTS_DONE: EVENTS_DONE, EVENTS: EVENTS}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as done");
       });
@@ -44,7 +66,8 @@ chrome.runtime.onMessage.addListener(
       let month = request.month;
       let day = request.day;
       EVENTS[year][month][day][id].done = false;
-      chrome.storage.local.set({EVENTS: EVENTS}, function(){
+      EVENTS_DONE[request.id] = false;
+      chrome.storage.local.set({EVENTS: EVENTS, EVENTS_DONE: EVENTS_DONE}, function(){
         sendResponse({EVENTS: EVENTS});
         console.log("event marked as undone");
       });
@@ -80,21 +103,27 @@ function makeXHRreq(url, method, responseType){
  * @function checkUserLogin [Check if the user has a valid login to moodle available.]
  */
 function checkUserLogin(){
-  makeXHRreq("https://moodle.plattsburgh.edu/login/index.php", "GET", "text")
+  let url = "http://cas.plattsburgh.edu";
+  // "https://moodle.plattsburgh.edu/login/index.php"
+  makeXHRreq(url, "GET", "text")
   .then(function(mainPage){
     console.log(mainPage);
-    if(mainPage.responseURL.search("moodle.plattsburgh.edu/my") > -1){
+    if(mainPage.responseURL.search("cas.plattsburgh.edu/sessions") > -1){
       console.log("User is logged in!");
+      LOGGED_IN = 1;
       getPageContainingURL();
     }
-    else if(mainPage.responseURL.search("cas.plattsburgh") > -1){
+    else if(mainPage.responseURL.search("cas.plattsburgh.edu/login") > -1){
       console.log("Send user notification to log in");
       // if the user is not logged in send a notification.
-      // TODO: Open a new tab to ask the user to log in to cas.
-      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="Log in again! Not able to get latest calender from Moodle.");
+      makeChromeNotification(type="basic", iconURL="../../icons/icon.png", title="Moodle Plattsburgh", message="You are not logged in to Moodle! Click more to login now!", [{
+            title: "Login Now!"
+        }]);
     }
     else{
       console.log("Some error occured!");
+      console.log("LOGIN TRACE: ");
+      console.log(mainPage);
     }
   })
   .catch(function(error){
@@ -108,23 +137,31 @@ function checkUserLogin(){
  * @param  {string} iconURL [url to the icon for notification]
  * @param  {string} title   [title to display on the notification]
  * @param  {string} message [message to be sent to the notification]
+ * @param {object} buttons buttons to be displayed on the notification
  */
-function makeChromeNotification(type, iconURL, title, message){
+function makeChromeNotification(type, iconURL, title, message, buttons=[]){
   chrome.notifications.create("1", {
     type: type,
     iconUrl: iconURL,
     title: title,
     message: message,
+    buttons: buttons,
     requireInteraction: true
   }, function(){});
 }
 
 /**
- * @function getCalenderURL [Get url of the calender]
- * @param  {string} html [HTML of the page in string format which contains calender]
- * @return {[type]}      [description]
+ * @function getCalenderURL Get url of the calender
+ * @param {string} html HTML of the page in string format which contains calender
  */
+// TODO: This function has some stability issues. It breaks sometimes at trying to
+// get href for calender url tag. Did check it on console for the actual page but
+// got no error. Probably something to do with how xhr returns results.
+// Mostly happens when user clicks refresh while the first promise is still fetching
+// data or xhr is still in process
 function getCalenderURL(html){
+  // to fix that issue of users not able to get pass through may be I need to go to
+  // moodle.plattsburgh.edu/my
   let jqueryHTML = $.parseHTML(html);
   let urlForCalender = $(jqueryHTML).find("#region-main > div > div > div > div.bottom > a")[0].href;
   makeXHRreq(url=urlForCalender, method="GET", responseType="text")
@@ -132,9 +169,8 @@ function getCalenderURL(html){
     parseCalender(calender.responseText);
   })
   .catch(function(error){
-    console.log(error);
+    console.log("getCalenderURL ERROR: ", error);
   });
-  console.log(urlForCalender);
 }
 
 
@@ -142,13 +178,34 @@ function getCalenderURL(html){
  * @function getPageContainingURL Get the page in html which contains the URL for calender
  */
 function getPageContainingURL(){
-  let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
-  makeXHRreq(url=url, method="GET", responseType="text")
-  .then(function(page){
-    getCalenderURL(page.response);
+  // need to login to moodle
+  let urlMoodleMain = "https://moodle.plattsburgh.edu/my";
+  makeXHRreq(url=urlMoodleMain, method="GET", responseType="text")
+  .then(function(mainMoodlePage){
+    if(mainMoodlePage.responseURL.search("moodle.plattsburgh.edu/my") > -1 || mainMoodlePage.responseURL.search("mahara.plattsburgh.edu") > -1){
+      let url = "https://moodle.plattsburgh.edu/calendar/view.php?view=month";
+      makeXHRreq(url=url, method="GET", responseType="text")
+      .then(function(page){
+        if(page.responseURL.search("moodle.plattsburgh.edu/calendar") > -1){
+          getCalenderURL(page.response);
+        }
+        else{
+          // recall this function in case of some unknown error which should possibly be
+          // fixed if we call again
+          getPageContainingURL();
+        }
+      })
+      .catch(function(error){
+        console.log("getPageContainingURL: Cannot get calendar: ", error);
+      });
+    }
+    else if(mainMoodlePage.responseURL.search("cas.plattsburgh.edu") > -1){
+      // user is not logged in "Probably".
+      checkUserLogin();
+    }
   })
   .catch(function(error){
-    console.log(error);
+    console.log("");
   });
 }
 
@@ -157,6 +214,7 @@ function getPageContainingURL(){
  * @param  {string} calender Calender.ics file in string format
  */
 function parseCalender(calender){
+  let EVENTS_TEMP = {};
   let jcalData = ICAL.parse(calender);
   let vcalendar = new ICAL.Component(jcalData);
   let vevents = vcalendar.getAllSubcomponents('vevent');
@@ -168,7 +226,7 @@ function parseCalender(calender){
     eventToAdd.summary = vevents[i].getFirstPropertyValue("summary");
     eventToAdd.startDate = vevents[i].getFirstPropertyValue("dtstart").toJSDate();
     eventToAdd.endDate = vevents[i].getFirstPropertyValue("dtend").toJSDate();
-    console.log(vevents[i].getFirstPropertyValue("dtend"));
+    //console.log(vevents[i].getFirstPropertyValue("dtend"));
     eventToAdd.endDateJSON = vevents[i].getFirstPropertyValue("dtend").toJSON();
     let dateYear = eventToAdd.endDate.getFullYear();
     let dateMonth = eventToAdd.endDate.getMonth()+1;
@@ -186,17 +244,9 @@ function parseCalender(calender){
 
     // Test is the event has a valid due date.
     if(eventToAdd.endDateJSON.timezone === "floating" || eventToAdd.endDateJSON.isDate === true){
-      // if(EVENTS[eventToAdd.uid]){
-      //   if(EVENTS[eventToAdd.uid][0] !=== eventToAdd.endDateJSON EVENTS[eventToAdd.uid][1] EVENTS[eventToAdd.uid][2])
-      // }
       if(EVENT_NEED_FIX[eventToAdd.uid]){
-        if(!EVENT_NEED_FIX[eventToAdd.uid].newDate){
-          EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
-        }
-        else{
-          EVENT_NEED_FIX[eventToAdd.uid].oldDate = EVENT_NEED_FIX[eventToAdd.uid].newDate;
-          // EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
-        }
+        EVENT_NEED_FIX[eventToAdd.uid].oldDate = eventToAdd.endDateJSON;
+        delete EVENT_NEED_FIX[eventToAdd.uid].newDate;
       }
       else{
         EVENT_NEED_FIX[eventToAdd.uid] = {};
@@ -204,55 +254,48 @@ function parseCalender(calender){
       }
     }
 
-    if(EVENTS[eventToAdd.uid]){
-      let oldEventloc = EVENTS[eventToAdd.uid];
-      console.log(eventToAdd.uid, EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid]);
-      eventToAdd.done = EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid].done;
-      EVENTS[oldEventloc[0]][oldEventloc[1]][oldEventloc[2]][eventToAdd.uid] = eventToAdd;
-      continue;
+    if(EVENTS_DONE[eventToAdd.uid]){
+      eventToAdd.done = EVENTS_DONE[eventToAdd.uid];
     }
     else{
       eventToAdd.done = false;
+      EVENTS_DONE[eventToAdd.uid] = false;
     }
 
-    EVENTS[eventToAdd.uid] = [eventToAdd.endDateJSON.year, eventToAdd.endDateJSON.month, eventToAdd.endDateJSON.day];
+    EVENTS_TEMP[eventToAdd.uid] = [eventToAdd.endDateJSON.year, eventToAdd.endDateJSON.month, eventToAdd.endDateJSON.day];
 
-    if(EVENTS[eventToAdd.endDateJSON.year]){
-      if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
-        if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
-          // if(EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid]){
-          //   eventToAdd.done = EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid].done;
-          // }
-          // else{
-          //   eventToAdd.done = false;
-          // }
-          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+    if(EVENTS_TEMP[eventToAdd.endDateJSON.year]){
+      if(EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month]){
+        if(EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day]){
+          EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
         else{
-          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-          EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+          EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+          EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
         }
       }
       else{
-        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
-        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-        EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+        EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
+        EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+        EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
       }
     }
     else{
-      EVENTS[eventToAdd.endDateJSON.year] = {};
-      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
-      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
-      EVENTS[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
+      EVENTS_TEMP[eventToAdd.endDateJSON.year] = {};
+      EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month] = {};
+      EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day] = {};
+      EVENTS_TEMP[eventToAdd.endDateJSON.year][eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
     }
-    // [eventToAdd.endDateJSON.month][eventToAdd.endDateJSON.day][eventToAdd.uid] = eventToAdd;
   }
 
   // call function to fix dates for those who have faulty dates
-  scrapeEventTime();
-
-  chrome.storage.local.set({EVENTS: EVENTS}, function(){
+  chrome.storage.local.set({EVENTS: EVENTS_TEMP}, function(){
     console.log("Events saved to storage");
+    // Set events in current instance
+    EVENTS = EVENTS_TEMP;
+    if(Object.keys(EVENT_NEED_FIX).length > 0){
+      scrapeEventTime();
+    }
   });
 
   // inform popup that events are now laoded
@@ -284,29 +327,31 @@ function scrapeEventTime(){
       // when they are not event needed
       if(tempURL){
         let linkToPageWithEvents = tempURL[0].replace(/&amp;/g, "&");
+        console.info("linkToPageWithEvents log: ", [uid, linkToPageWithEvents]);
         return scrapeListOfEventsPage(linkToPageWithEvents, uid);
       }
       else{
+        // Have to return undefined for now as there is no other way to get past this place.
         return undefined;
       }
     });
 
     Q.allSettled(listofpromisesForEventURL)
     .then(function(eventUrlWithID){
-      // console.log(eventUrlWithID);
-      let scraptedDates =  eventUrlWithID.map(function(idAndUrl){
+      let scraptedDatesURL =  eventUrlWithID.map(function(idAndUrl){
         if(idAndUrl.state === "fulfilled" && idAndUrl.value !== undefined){
           return getDueDateFromEventPage(idAndUrl.value[1], idAndUrl.value[0]);
         }
       });
-      Q.allSettled(scraptedDates)
+      Q.allSettled(scraptedDatesURL)
       .then(function(jsonDate){
+        console.log(jsonDate);
         jsonDate.forEach(function(jsDate){
           if(jsDate.state === "fulfilled" && jsDate.value !== undefined){
             EVENT_NEED_FIX[jsDate.value[1]].newDate = jsDate.value[0];
           }
         });
-        console.log(EVENT_NEED_FIX);
+        console.warn("About to fix events", EVENT_NEED_FIX);
         fixDropBoxEvents();
       })
       .catch(function(error){
@@ -333,16 +378,18 @@ function scrapeListOfEventsPage(linkToPageWithEvents, idOfEvent){
       makeXHRreq(linkToPageWithEvents, "GET", "text")
       .then(function(pageWithEvent){
         let $pageWithEvent = $.parseHTML(pageWithEvent.responseText);
-        let eventURL = $($pageWithEvent).find(`#event_${idOfEvent} > div > div.box.card-header.clearfix > h3 > a`)[0].href;
-        if(eventURL){
-          resolve([idOfEvent, eventURL]);
+        let eventURLlen = $($pageWithEvent).find(`#event_${idOfEvent} > div > div.box.card-header.clearfix > h3 > a`);
+        if(eventURLlen.length > 0){
+          console.info("scrape event url log: ", [idOfEvent, eventURLlen]);
+          resolve([idOfEvent, eventURLlen[0].href]);
         }
         else{
+          console.warn("WARN-ERROR scrape event !url log: ", [idOfEvent, eventURLlen]);
           reject("Event Url not found");
         }
       })
       .catch(function(error){
-        console.log(error);
+        console.warn("ERROR: scrapeListofEvents Trace: ", [{"idOfEvent": idOfEvent}, error]);
       });
     // getDueDateFromEventPage(eventURL, idOfEvent);
   });
@@ -358,9 +405,11 @@ function getDueDateFromEventPage(actualEventPageURL, idOfEvent){
     makeXHRreq(actualEventPageURL, "GET", "text")
     .then(function(actualEventPage){
       let $event = $.parseHTML(actualEventPage.responseText);
-      let eventDate = $($($event).find('tr:has(td:contains("Due date"))').children()[1]).text();
-      // console.log(eventDate);
-      if(eventDate){
+      console.log($event);
+      let eventDateChildren = $($event).find('tr:has(td:contains("Due date"))').children();
+      console.log(eventDateChildren);
+      if(eventDateChildren.length > 0){
+        let eventDate = $(eventDateChildren[1]).text();
         let tempDateObject = new Date(eventDate);
         let dateYear = tempDateObject.getFullYear();
         let dateMonth = tempDateObject.getMonth()+1;
@@ -450,4 +499,39 @@ function fixDropBoxEvents(){
   });
 }
 
-checkUserLogin();
+// Add listener when login option is selected from notification.
+chrome.notifications.onButtonClicked.addListener(function(notificationID, buttonIndex){
+  // close the notification as user clicks it.
+  chrome.notifications.clear(notificationID, function(wasCleared){
+    console.log("Notification: ", notificationID, " closed.");
+  });
+  // This is the index of the button clicked.
+  if(buttonIndex === 0){
+    console.log("Open popup to login!");
+    // open a new popup with moodle page to login
+    chrome.windows.create({'url': 'https://cas.plattsburgh.edu/login', 'type': 'popup', 'focused': true}, function(window) {
+      // get current tab's url
+      chrome.tabs.get(window.tabs[0].id, function(tabOject){
+        console.log(tabOject.url);
+        // check on every update what is the url of the current tab.
+        chrome.tabs.onUpdated.addListener(function tabListener(updatedTabId, changeInfo, tabitself){
+          console.log(tabitself);
+          // Need to check only for complete status else there is a lot of waste information
+          if(tabitself.status === "complete"){
+            if(tabitself.url.search("cas.plattsburgh.edu/sessions") > -1 || tabitself.url.search("mahara.plattsburgh.edu") > -1){
+              console.log(window);
+              chrome.windows.remove(window.id);
+              //chrome.tabs.onUpdated.removeListener();
+              LOGGED_IN = 1;
+              checkUserLogin();
+              // Remove listener otherwise this shows notifications for every page load in every tab
+              chrome.tabs.onUpdated.removeListener(tabListener);
+            }
+          }
+        });
+      });
+    });
+  }
+});
+
+// checkUserLogin();
