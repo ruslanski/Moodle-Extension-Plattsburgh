@@ -4,10 +4,16 @@
 	<link rel="stylesheet" href="browser_action.css" />
 	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" type="text/css" />
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+   	<script src="js/wow/wow.min.js"></script>
+	<script>
+	new WOW().init();
+	</script>
 	<script src="../../js/jquery/jquery.min.js"></script>
   <script src="browser_action.js"></script>
 </head>
 <body>
+<div  class="animated wow fadeInDown",data-wow-delay="0.2s">
 	<div id="mainPopup" class="mainpopup">
 			<form id="todo-list">
 				<!-- <div id="add-todo">
@@ -20,7 +26,9 @@
         </div>
 		</form>
 	</div>
+		</div>
 	<div id="loading">
 	</div>
+
 </body>
 </html>
